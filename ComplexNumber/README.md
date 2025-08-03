@@ -1,6 +1,4 @@
---[[
---------------------------------------------------------------------------------
-		** DOCUMENTATION **														
+# Documentation
 	* Function descriptions are included with the function, if possible to be viewed.
 																				
 	* Definitions:																
@@ -47,27 +45,14 @@
 	- .__metatable = "ComplexNumber"											
 	- .__len() (Note: This metamethod is equivalent to :magnitude())			
 	- .__tostring() (Note: This metamethod converts the ComplexNumber into a string to display. Format is similar to that of cmath library in Python.)
-																				
---------------------------------------------------------------------------------
-		** ADDITIONAL INFO **													
+
+# Additional Information
 	Thank you for using this ComplexNumber module! This was originally made as a
 	practice, not meant as production-worthy code!								
 																				
-	You are allowed to modify the source code of this module, and allowed to claim
-	such modifications via additions/optimizations/organizations/implementations/etc.
-	as your attributions. If these modifications were to be contributed to this module's
-	source code, as long as they are provided with creditable source of such idea,
-	or with proof that they are sufficient to this module, that is optimized, or
-	performant, they may be accepted in future editions to this module.
-																				
-	You are not allowed to claim this specific module as yours! You are only allowed
-	to modify the contents of the source code. If you would like to contribute to
-	this module, please contact me.												
-																				
 							~ ComplexNumber module made by Abby (@0_byy) on Roblox
-																				
---------------------------------------------------------------------------------
-		** COMPLEX NUMBER FORMULAS **											
+
+# Formulas
 	Note:																		
 	- These are the formulas used within this module. In some cases, they are	
 	chosen by programming convention. In other cases, it might be a bug... oops.
@@ -141,8 +126,7 @@
 		= (x^2 + y^2)^(u/2)  *  exp(-v * arg(a))  *  cis(u*arg(a) + v*ln(x^2 + y^2)/2)
 		  ---- term 1 -----     ---- term 2 ----     ------------ term 3 -------------
 																				
---------------------------------------------------------------------------------
-		** EXTERNAL LINKS **													
+# External links
 	* Reference:																
 	** Wikipedia:																
 		https://en.wikipedia.org/wiki/Complex_number							
@@ -151,5 +135,3 @@
 	** Wolfram MathWorld:														
 		https://mathworld.wolfram.com/ComplexArgument.html						
 		https://mathworld.wolfram.com/ComplexExponentiation.html				
---------------------------------------------------------------------------------
-]]
