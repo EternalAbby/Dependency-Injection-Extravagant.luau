@@ -1,9 +1,10 @@
 --!strict
+
 local TypeCheck = require(script.Parent.TypeCheck)
 
 local module = {}
 
-type RawComplexNumber = {
+export type RawComplexNumber = {
 	["real"]: number,
 	["complex"]: number
 }
@@ -14,8 +15,8 @@ export type ComplexNumber = setmetatable<{
 }, typeof(module)>
 
 
-local pow_res = {math.huge, 1, 0}
-local tostring_signs = {"-", "+", "+"}
+local pow_res = {math.huge, 1, 0} -- used for __pow()
+local tostring_signs = {"-", "+", "+"} -- used for __tostring()
 
 local function CreateRawComplexNumber(real: number, complex: number): RawComplexNumber
 	return {
@@ -28,6 +29,7 @@ local function GetNumberComponentTypes(candidate: ComplexNumber | number): (bool
 	return TypeCheck.isNumber(candidate, true), TypeCheck.isComplexNumber(candidate)
 end
 
+-- Constructor: Creates a new ComplexNumber object. Does not accept inf nor nan.
 module.new = function(real: number, complex: number): ComplexNumber
 	assert(TypeCheck.isNumber(real, false), `Failed to construct a new ComplexNumber. Expected number type for real part (arg #1), got {typeof(real)}.`)
 	assert(TypeCheck.isNumber(complex, false), `Failed to construct a new ComplexNumber. Expected number type for complex part (arg #2), got {typeof(complex)}.`)
@@ -38,6 +40,7 @@ end
 
 local complexUnit = module.new(0, 1)
 
+-- Constructor: Creates a new ComplexNumber object from a valid RawComplexNumber type.
 module.fromRaw = function(raw: RawComplexNumber): ComplexNumber
 	assert(TypeCheck.isComplexNumber(raw), `Failed to construct a new ComplexNumber. Expected RawComplexNumber type (arg #1), got {typeof(raw)}`)
 	
@@ -46,6 +49,10 @@ module.fromRaw = function(raw: RawComplexNumber): ComplexNumber
 end
 
 
+--[[
+Function: Computes the trigonometric function cis(theta).
+Equivalent to computing 'cos(theta) + 𝒊 sin(theta)', or Euler's formula.
+]]
 module.cis = function(theta: number): ComplexNumber
 	assert(TypeCheck.isNumber(theta, false), `Failed to compute cis trig function. Expected number type (arg #1), got {typeof(theta)}`)
 	
@@ -55,18 +62,25 @@ module.cis = function(theta: number): ComplexNumber
 end
 
 
+--[[
+Method: Computes the modulus (magnitude, or absolute value) of the ComplexNumber object.
+Similarly, using # operator on a ComplexNumber object returns this result.
+]]
 module.magnitude = function(self: ComplexNumber): number
 	return math.sqrt(self.real^2 + self.complex^2)
 end
 
+-- Method: Computes the complex argument (counter-clockwise angle from the positive real axis) of the ComplexNumber object.
 module.argument = function(self: ComplexNumber): number
 	return math.atan2(self.complex, self.real)
 end
 
+-- Method: Creates a new ComplexNumber object that is the complex conjugate to the ComplexNumber object which this method was called on.
 module.conjugate = function(self: ComplexNumber): ComplexNumber
 	return module.new(self.real, -self.complex)
 end
 
+-- Method: Returns both the magnitude, and the complex argument.
 module.polar = function(self: ComplexNumber): (number, number)
 	local r = self:magnitude()
 	local phi = self:argument()
@@ -77,7 +91,7 @@ end
 module.__index = module
 
 module.__newindex = function()
-	error("TODO: better error message")
+	error("Attempted to create a new key/index in a ComplexNumber object.")
 end
 
 module.__metatable = "ComplexNumber"
@@ -269,7 +283,7 @@ module.__tostring = function(self: ComplexNumber): string
 	local complex_sign = tostring_signs[math.sign(self.complex) + 2]
 	local complex_number = math.abs(self.complex)
 	
-	return `({self.real} {complex_sign} {complex_number}??)`
+	return `({self.real} {complex_sign} {complex_number}𝒊)`
 end
 
 return module::typeof(module)

@@ -1,1 +1,11 @@
-This is still WIP code. No documentations available at the moment. Please review the source code for better info on how to use this module.
+# Author's note
+Thank you for using the TypeCheck module!
+
+This was originally made as a coding practice for typechecking.
+
+Due to the dependency of `ComplexNumber` module, this module is made public. However, it is still in an unstable state, so be warned.
+
+~ TypeCheck module made by Abby
+
+# Pre-requisite dependencies
+This module does not have any dependencies.
