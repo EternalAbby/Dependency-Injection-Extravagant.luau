@@ -42,7 +42,7 @@ This is DIE.
 
 Originally, this series was made for *personal coding practices*, and I never had any plans of open-sourcing these. But after some thought, I've figured that creating these modules without anyone to share it with is quite pointless. And since I need to gain some experiences with open-source projects anyway, I've decided on using GitHub, and give it a chance!
 
-## Why use this module?
+## Why use this?
 This is DIE.
 
 **You don't!**
