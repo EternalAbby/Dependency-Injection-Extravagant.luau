@@ -18,7 +18,7 @@ module.isNumber = function(candidate: any, allowSpecial: boolean): boolean
 		return false
 	end
 	
-	if not allowSpecial and (candidate == candidate and abs(candidate) ~= huge) then
+	if not allowSpecial and (candidate ~= candidate or abs(candidate) == huge) then
 		return false
 	end
 	
@@ -112,5 +112,6 @@ module.isRBXObject = function(candidate: any, classname: string?): boolean
 	
 	return true
 end
+
 
 return module::typeof(module)
