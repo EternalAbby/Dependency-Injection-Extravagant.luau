@@ -8,20 +8,20 @@ Due to current limitations with user-generated function descriptions in Roblox S
 This section includes Definitions, Constructors, Functions, Methods, and Metamethods in that order.
 
 ## Definitions
-These are type definitions.
+These are type definitions that are used in the module.
 
 ### RawComplexNumber type
 `number` primitive type **must not** be `math.huge` (inf), `-math.huge` (-inf), or `nan` (not a number).
-```
-RawComplexNumber = {
+```lua
+export type RawComplexNumber = {
 	["real"]: number,
 	["complex"]: number
 }
 ```
 
 ### ComplexNumber type
-```
-ComplexNumber = setmetatable<{
+```lua
+export type ComplexNumber = setmetatable<{
 	["real"]: number,
 	["complex"]: number
 }, typeof(module)>
@@ -194,6 +194,6 @@ print(num) -- using print() calls __tostring
 ```
 
 Output
-```
+```lua
 (2 + 3𝒊)
 ```

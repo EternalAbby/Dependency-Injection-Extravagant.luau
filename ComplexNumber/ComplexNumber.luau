@@ -26,7 +26,7 @@ local function CreateRawComplexNumber(real: number, complex: number): RawComplex
 end
 
 local function GetNumberComponentTypes(candidate: ComplexNumber | number): (boolean, boolean)
-	return TypeCheck.isNumber(candidate, true), TypeCheck.isComplexNumber(candidate)
+	return TypeCheck.isNumber(candidate::number, true), TypeCheck.isComplexNumber(candidate::ComplexNumber)
 end
 
 -- Constructor: Creates a new ComplexNumber object. Does not accept inf nor nan.

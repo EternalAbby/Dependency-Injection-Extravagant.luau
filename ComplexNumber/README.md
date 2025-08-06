@@ -6,7 +6,7 @@ This was originally made as a coding practice for typechecking, and OOP. This wa
 ~ ComplexNumber module made by Abby
 
 # Pre-requisite dependencies
-- TypeCheck v0.1.0
+- TypeCheck v0.1.1 (v0.1.0 works)
 
 # External links
 Here are some links you might find interesting. Please make sure that they are safe links before checking them out!
