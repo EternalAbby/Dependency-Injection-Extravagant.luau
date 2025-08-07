@@ -1,71 +1,94 @@
-# Dependancy-Injection-Extravagant.luau
-This is DIE, short for Dependancy Injection Extravagant!
+# Dependency-Injection-Extravagant.luau
+This is DIE, short for Dependency Injection Extravagant!
 
-This repository has many modules. These are made for utility purposes in the `Roblox Studio` game engine, but if possible, you can use this in other projects that also uses Luau!
+This repository has many modules made for utility purposes in the [Roblox Studio](https://create.roblox.com/docs/studio/setup) game engine. This doesn't mean that it isn't possible to use this in other projects with Luau!
 
-Feel free to use any modules from here within your project!
+Disclaimer: Every module within this repository was never made with the intent of being efficient, nor performant for production code.
+
+**Feel free to use any modules from here within your project!**
 
 # Instructions
-Since I haven't learnt how to properly allow others to add the source code into their game, you can't expect this section to be ethical. I'm still trying to work on this as GitHub, and this whole open-source thing is still new to me.
+*Updated for v1.1.0 of DIE*
 
-To start, here are some of my recommendations for your project.
+Here's how you can download a module from this repository;
+- Head over to `Releases`, and find the `.rbxm` file for the module that you would like to use.
+- Download the `.rbxm` file onto your computer.
+- After downloading the `.rbxm` file, go into your game place in *Roblox Studio*. Copy and paste the file into the `Explorer`.
+- Enjoy!
 
-- If you're going to want to have some *code organizations* in your project, please create a `Folder` named `Modules` for any modules that you want to be used throughout the project.
+Make sure that you also do the following;
+- Read the `README` file for more details about the module!
+- Read the `_DOCUMENTATION` file for more information on how to use the module!
+- Check the `_VERSION` file to make sure that you got the latest release of the module!
 
-- After that, a personal recommendation for this series, you could either create another `Folder` named `Dependancy Injection Extravagant`, or `D.I.E.`, or `DIE`, or whatever you want to call it to store the modules in this repository. Otherwise, you can simply create another `ModuleScript` for this. Modules in this repository may reference other modules within here as well, so **make sure to set their directory path correctly and provide their dependancy as well**!
+**Recommendations**
+- It is recommended that you read `README`, and `_DOCUMENTATION` files on GitHub as they are written in `.md` file format. These files are also included in the download, but are in `Markdown` format.
+- If you don't know how to organize these modules, it is recommended that you put every module in this repository under the same hierachy in the directory tree, because dependencies from these modules are referenced under the same hierachy in the source code.
+- If you don't know where to start with a module, it is recommended that you start by reading through the `_DOCUMENTATION` file. This file gives an in-depth description for everything in a module, and should be the most up-to-date.
+- If you don't know what pre-requisite modules are missing, it is recommended that you use the `Pre-requisite dependencies` list in the `README` file.
 
-- Here's the unethical part, find the source code of the module that you want to use, and paste it into your `ModuleScript`. That's all there is to it, please remember that you need to supply their dependancies as well!
+**Troubleshooting**
+- If you have the required pre-requisite modules, but it couldn't find such module, make sure that the directory path is valid within the source code of the module. Reminder that these dependencies are referenced under the same hierachy.
+- If you have the required pre-requisite modules, but it throws an error when the dependency is used, make sure that you have the correct version of them.
 
 # Questions!
-I came up with these questions myself, so if you have anymore, you can always ask me personally! And I might add them into here in the future.
+This section is for questions (that I mostly came up myself), including some facts about this repository. If you have any other questions, you are free to ask me personally! If your question is frequent enough, I might add them here in the future!
 
 ## What is this?
 This is DIE.
 
-A series of modules made for Luau. Hence, the .luau at the end of this repository.
+This repository is made to contain a series of modules made for the scripting language called [Luau](https://luau.org/). Hence, the .luau "file extension" of this repository name.
 
 That's all there is to it!
 
-## Why did you make this module?
+## Why did you make this repository?
 This is DIE.
 
-Originally, this is made as *personal coding practices*. But along the journey, I've figured that creating these modules without anyone to share it with is quite pointless. From there, I've decided to give GitHub a chance!
+Originally, this series was made for *personal coding practices*, and I never had any intention of making them open-sourced. They were made to be simple utility modules that I might use in `Roblox Studio` projects.
 
-As of writing this draft, there are still lots for me to discover, so I hope this will serve as a starting point of my journey on this site. So far, there isn't any proper code organizations for this repository, which will be my next concern.
+Over time, I've figured that creating these modules without anyone to share with or use in an actual project is quite pointless. They would be left to rot on my computer. How unfortunate!
 
-## Why use this module?
+Since I needed to gain some experiences in dealing with open-source projects in the future, I've decided on releasing them here on GitHub! I only hope that someone will find this repository useful to them someday.
+
+## Why use this?
 This is DIE.
 
 **You don't!**
 
-As said from above, this is made as *personal coding practices*, so it's not meant as **production code**! However, don't let that discourage you from using any of these modules for your own means! Whether it is used for utility purposes within your projects, or as a code review for your very own practices! There are lots to explore, and I hope others can have a great time looking through the source code of this module!
+As said from above, this series was made for *personal coding practices*, so it was never meant to be for **production** code!
 
-## Where did you come up with this name? What is Dependancy Injection? That term sounds very dangerous!
+However, don't let that discourage you from using them in your project! You can always use them for whatever purposes you want! Whether it is for utility in your game, code review to read through others code, or whatever it is.
+
+## Where did you come up with this name? What is Dependency Injection? That term sounds very dangerous!
 This is DIE.
 
-Because DI, short for Dependancy Injection, was very close to "die", I wanted to find another word in place for "E". What better way to do it than to make this module *Extravagant*! Well, meaning that there is unnecessary amount of modules. And to make it worse, some modules within the module also rely on each other! What a mess! But that's how DI design goes.
+Simply put, this repository is following the DI design, or Dependency Injection. Since DI was very close to "die", and I thought it was quite funny, so I decided to make this series *Extravagant*! That means there is an unnecessary amount of modules here, and to make it worse, some modules here also rely on each other!
 
-Speaking of which, the DI design is essentially a program using (injecting) an external program (dependancy) that is completely dependent from the main one. That's the basic gist of it. For more information, don't ask me! I only chose this term into the name, because of the reason above!
+What a total mess! But that's how this DI design goes.
 
-And don't worry! This is not always a bad design choice, for bigger projects, it's best to have a dependancy that already handles an operation for you without having to recreate the system again. Since this is a Luau module, let's take a familiar example with the Luau language. When getting a library, say the `table` library, you're essentially injecting another dependancy into your script! Fortunately, there are usually no side effects when using these libraries in your script as they shouldn't change their functionalities over time, those developers know what they're doing more than I do! lol
+Speaking of which, the DI design is essentially a program using (injecting) an external program (dependency) that is completely dependent from the main one. That's the basic gist of it.
 
-## What are the side effects of the DI design?
+For more information, refer to the [Wikipedia](https://en.wikipedia.org/wiki/Dependency_injection) page. Please don't ask me! I only chose this term as part of the name, because of the reason above!
+
+Although the name sounds very intimidating, it is not always a bad design choice, especially for bigger projects where no one would want to create these systems themselves. You might see this happening in Luau as well! Take for example, when you get a library, you're essentially injecting a dependency into your script! But don't worry, usually these dependencies had lots of thoughts put into them to make sure that they don't break for every releases.
+
+## When does this DI design fail?
 This is DIE.
 
-Well, as dependancy keeps on getting updated, your program might not function as it is supposed to. This may be because the dependancy no longer supporting the original code of your program. And another problem arises when the dependancy might have crucial optimizations that your program needs for that significant performance boost.
+Dependencies update over time, and in turn, it might stop supporting its backward-compatibility functionalities for your program. Sometimes, this is okay, because you can simply keep the old versions, and not update to the newer version. But other times, you might be missing out on huge improvements in later versions of the dependencies.
 
-With that in mind, developers who actively handle these dependancies know what they're doing, and usually tries not to cause huge impact on existing source code. That is to say, you can just simply keep the previous version instead of updating, but again, that performance boost from the lastest version might be very important. Take the example above, the developers behind Luau knows that significant changes will destroy existing codes, so as a promise, everything they do is always backwards compatible with their previous versions, only adding upon their existing coding style.
-
-However, don't expect me to do the same as them. I cannot look into the future, so I can't say for certain that any of the modules will have significant changes later on in development. But I can say for certain that, if there are any changes, I will make sure to document on them!
+With that in mind, maintainers for these dependencies usually know what they're doing, and tries to minimize the impact from changes onto existing code.
 
 ## What do we expect in the future?
 This is DIE.
 
-As I said, I cannot look into the future.
+I cannot look into the future. Quite sad.
 
-However, you can expect the quality, and quantity of this repository over time! Please note that, as of writing this draft, I'm still trying to get into the outside world of coding here, and using GitHub as my first place for me to start!
+You can expect the quality (and quantity) of this repository to increase over time!
 
-## Is there anything else we need to consider when using this <XYZ> module?
-This is DIE.
+However, don't expect that there won't be any significant changes made to any of the modules. If there are any, I will make sure to document them in the release note!
 
-Please remember to supply the modules with their dependancies as well!
+## Is there anything else to consider when using this XYZ module?
+no.
+
+As long as you follow the instructions, you shouldn't have any trouble setting up the module.
