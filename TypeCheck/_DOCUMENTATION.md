@@ -4,7 +4,7 @@ This file is made as a temporary solution for a Documentation for this module. A
 # Note
 Due to dependency from `ComplexNumber` module, this module is made public.
 
-Please note that this module does not have an exhaustive list of every types as of v0.1.0. Do expect changes made to this module as it was not meant to be ready for use.
+Disclaimer: This module does **not** include an exhaustive list of every Luau primitive types as of v0.1.1. As this module is still in its unstable state, do expect future changes made to this module that *may* any existing code. You have been warned.
 
 # Documentation
 This section includes Definitions, and Functions in that order.
@@ -55,5 +55,6 @@ Equivalent to using the `.isTable()` function.
 
 ### .isRBXObject(candidate: Object?, classname: string?): boolean
 Returns `true` if `candidate` is a `Object` type.
+
 
 Optional `classname` parameter checks for matching `.ClassName` property of `candidate`.
