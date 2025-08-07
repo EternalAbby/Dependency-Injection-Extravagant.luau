@@ -1,12 +1,12 @@
 # Author's note
 Thank you for using the ComplexNumber module!
 
-This was originally made as a coding practice for typechecking, and OOP. This was not made with the intent of being production-worthy code!
+This was originally made as a coding practice for typechecking, and programming in OOP paradigm using built-in metatables.
 
 ~ ComplexNumber module made by Abby
 
 # Pre-requisite dependencies
-- TypeCheck v0.1.1 (v0.1.0 works)
+- TypeCheck v0.1.1
 
 # External links
 Here are some links you might find interesting. Please make sure that they are safe links before checking them out!

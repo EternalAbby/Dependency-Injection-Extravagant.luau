@@ -29,6 +29,9 @@ local function GetNumberComponentTypes(candidate: ComplexNumber | number): (bool
 	return TypeCheck.isNumber(candidate::number, true), TypeCheck.isComplexNumber(candidate::ComplexNumber)
 end
 
+
+-- ** CONSTRUCTORS ** --
+
 -- Constructor: Creates a new ComplexNumber object. Does not accept inf nor nan.
 module.new = function(real: number, complex: number): ComplexNumber
 	assert(TypeCheck.isNumber(real, false), `Failed to construct a new ComplexNumber. Expected number type for real part (arg #1), got {typeof(real)}.`)
@@ -49,6 +52,8 @@ module.fromRaw = function(raw: RawComplexNumber): ComplexNumber
 end
 
 
+-- ** FUNCTIONS ** --
+
 --[[
 Function: Computes the trigonometric function cis(theta).
 Equivalent to computing 'cos(theta) + 𝒊 sin(theta)', or Euler's formula.
@@ -61,6 +66,8 @@ module.cis = function(theta: number): ComplexNumber
 	return cosine + sine
 end
 
+
+-- ** METHODS ** --
 
 --[[
 Method: Computes the modulus (magnitude, or absolute value) of the ComplexNumber object.
@@ -87,6 +94,8 @@ module.polar = function(self: ComplexNumber): (number, number)
 	return r, phi
 end
 
+
+-- ** METAMETHODS ** --
 
 module.__index = module
 

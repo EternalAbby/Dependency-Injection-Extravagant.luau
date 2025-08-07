@@ -2,7 +2,7 @@
 This file is made as a temporary solution for a Documentation for this module. Anything below will be moved into the Wiki section in the future. Therefore, it is not guaranteed that this file is complete.
 
 # Note
-Due to current limitations with user-generated function descriptions in Roblox Studio. Only Constructors, Functions, and Methods will include their respective descriptions. Every Metamethods will not have their function descriptions stated. However, they will be listed here in the Documentation section.
+Due to current limitations with user-generated function descriptions in Roblox Studio. Only Constructors, Functions, and Methods will include their respective descriptions. Metamethods will not have their function descriptions stated. However, they will be listed here in the Documentation section.
 
 # Documentation
 This section includes Definitions, Constructors, Functions, Methods, and Metamethods in that order.
