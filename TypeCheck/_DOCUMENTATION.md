@@ -53,8 +53,7 @@ Returns `true` if `candidate` is a `table` primitive type.
 
 Equivalent to using the `.isTable()` function.
 
-### .isRBXObject(candidate: Object?, classname: string?): boolean
-Returns `true` if `candidate` is a `Object` type.
-
+### .isInstance(candidate: Object?, classname: string?): boolean
+Returns `true` if `candidate` is an `Instance` type.
 
 Optional `classname` parameter checks for matching `.ClassName` property of `candidate`.
