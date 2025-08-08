@@ -11,13 +11,13 @@ This section includes Definitions, Constructors, Functions, Methods, and Metamet
 These are type definitions that are used in the module.
 
 ### RawComplexNumber type
-`number` primitive type **must not** be `math.huge` (inf), `-math.huge` (-inf), or `nan` (not a number).
 ```lua
 export type RawComplexNumber = {
 	["real"]: number,
 	["complex"]: number
 }
 ```
+*`number` primitive type **must not** be `math.huge` (inf), `-math.huge` (-inf), or `nan` (not a number). This is to prevent any unexpected behavior from these special numbers.*
 
 ### ComplexNumber type
 ```lua
@@ -26,6 +26,7 @@ export type ComplexNumber = setmetatable<{
 	["complex"]: number
 }, typeof(module)>
 ```
+*`number` primitive type **must not** be `math.huge` (inf), `-math.huge` (-inf), or `nan` (not a number). This is to prevent any unexpected behavior from these special numbers.*
 
 ## Constructors
 These are constructors that can be used by the user.
@@ -55,7 +56,7 @@ These are functions that can be used by the user.
 ### .cis(theta: number): number
 Computes the `cis` trigonometry function using `theta`. `theta` must be a `number` primitive type.
 
-This function is equivalent to computing the trigonometry formula: `cos(theta) + 𝒊 sin(theta)`. Subsequently, it is also the result of Euler's formula: `e^(i * theta) = exp(𝒊 * theta)`. In some details, this is due to the formula's property, which establishes the relationship between the trignometric functions, and the complex exponential function. For more details, please refer to the [Wikipedia](https://en.wikipedia.org/wiki/Euler%27s_formula) page for Euler's formula.
+This function is equivalent to computing the trigonometry formula: `cos(theta) + 𝒊 sin(theta)`. Subsequently, it is also the result of Euler's formula: `e^(i * theta) = exp(𝒊 * theta)`. In some details, this is due to the formula's property, which "establishes the relationship between the trignometric functions, and the complex exponential function" (Wikipedia). For more details, please refer to the [Wikipedia](https://en.wikipedia.org/wiki/Euler%27s_formula) page for Euler's formula.
 
 Returns a new `ComplexNumber` object as the result from computing `cis()`. If failed, throws an error.
 
@@ -79,7 +80,6 @@ Computes the argument (counter-clockwise angle from the positive real axis) of t
 Returns the result.
 
 As of v1.0.0, there is no error handling.
-
 
 ### :conjugate(): number
 Creates a new ComplexNumber object that is the complex conjugate to the ComplexNumber object which this method was called on.
@@ -122,7 +122,7 @@ Creates a new `ComplexNumber` object that is the product of `a`, and `b`.
 Returns the new `ComplexNumber` object. If neither `a`, or `b` is the correct type, throws an error.
 
 ### .__div(a: ComplexNumber | number, b: ComplexNumber | number): ComplexNumber
-Creates a new `ComplexNumber` object that is the ratio `a`, and `b`.
+Creates a new `ComplexNumber` object that is the ratio of `a`, and `b`.
 
 Returns the new `ComplexNumber` object. If neither `a`, or `b` is the correct type, throws an error.
 
@@ -133,30 +133,30 @@ Equivalent to using `.__div()` metamethod, then applying `math.floor()` to the r
 
 Returns the new `ComplexNumber` object. If neither `a`, or `b` is the correct type, throws an error.
 
-### .__mod(a: ComplexNumber | number, b:ComplexNumber | number): nil
+### .__mod(a: ComplexNumber | number, b: ComplexNumber | number): nil
 Although this method is defined in the source code, it does not have any functionality.
 
 As of v1.0.0, attempting to use the `%` operator will always throw an error.
 
 ### .__pow(a: ComplexNumber | number, b: ComplexNumber | number): ComplexNumber
-Creates a new `ComplexNumber` object that is the sum of `a`, and `b`.
+Creates a new `ComplexNumber` object that is the exponentiation of `a`, and `b`.
 
 Returns the new `ComplexNumber` object. If neither `a`, or `b` is the correct type, throws an error.
 
 ## Metamethods - Equality Comparison
-### .__eq(a: ComplexNumber | number, b: ComplexNumber | number): boolean
+### .__eq(a: ComplexNumber, b: ComplexNumber): boolean
 Determines whether both `a`, and `b` are *equivalent* (or the expression `a == b`). This is done by comparing their magnitude.
 
 Returns `true` if equivalent. Otherwise, returns `false`.
 
-### .__lt(a: ComplexNumber | number, b: ComplexNumber | number): boolean
+### .__lt(a: ComplexNumber, b: ComplexNumber): boolean
 Determines whether `a` is *strictly less than* `b` (or the expression `a < b`). This is done by comparing their magnitude.
 
 Because this is also used for *strictly greater than*, this metamethod is equivalent to determining whether `b` is *strictly greater than* `a` (or the expression `b > a`).
 
 Returns `true` if `a` is strictly less than `b`. Otherwise, returns `false`.
 
-### .__le(a: ComplexNumber | number, b: ComplexNumber | number): boolean
+### .__le(a: ComplexNumber, b: ComplexNumber): boolean
 Determines whether `a` is *less than or equal to* `b` (or the expression `a <= b`). This is done by comparing their magnitude.
 
 Because this is also used for *greater than or equal to*, this metamethod is equivalent to determining whether `b` is *greater than or equal to* `a` (or the expression `b >= a`).
@@ -175,11 +175,11 @@ Computes the magnitude (modulus/absolute value) of the ComplexNumber object.
 
 Returns the result.
 
-Alternatively, you can call the `:magnitude()` method with the same result.
+Alternatively, you can call the `:magnitude()` method with the same result. Internally, this metamethod directs to the method.
 
 As of v1.0.0, there is no error handling.
 
-### .__tostring()
+### .__tostring(self: ComplexNumber): string
 Creates a string representation of the `ComplexNumber` object. The display format is similar to that of the `cmath` module in Python.
 
 Returns the resulting formatted string.
