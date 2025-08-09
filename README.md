@@ -3,6 +3,11 @@ This is DIE, short for Dependency Injection Extravagant!
 
 This repository has many modules made for utility purposes in the [Roblox Studio](https://create.roblox.com/docs/studio/setup) game engine. This doesn't mean that it isn't possible to use this in other projects with Luau!
 
+*This repository made with the intent of,*
+> "Create it yourself or DIE"
+
+*along with being simple to use.*
+
 Disclaimer: Every module within this repository was never made with the intent of being efficient, nor performant for production code.
 
 **Feel free to use any modules from here within your project!**
@@ -15,6 +20,8 @@ Here's how you can download a module from this repository;
 - Download the `.rbxm` file onto your computer.
 - After downloading the `.rbxm` file, go into your game place in *Roblox Studio*. Copy and paste the file into the `Explorer`.
 - Enjoy!
+
+*Alternatively, you can download the `DependencyInjectionExtravagant vMAJOR.MINOR.PATCH` file. This `.rbxm` file includes the latest releases of every modules, allowing you to only down **1** file instead of multiple.*
 
 Make sure that you also do the following;
 - Read the `README` file for more details about the module!
