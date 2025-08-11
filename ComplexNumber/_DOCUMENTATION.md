@@ -54,7 +54,7 @@ Alternatively, for constructing a new `ComplexNumber` from two `number` primitiv
 These are functions that can be used by the user.
 
 ### .cis(theta: number): number
-Computes the `cis` trigonometry function using `theta`. `theta` must be a `number` primitive type.
+Computes the `cis` trigonometry function using an angle `theta` (in radians). `theta` must be a `number` primitive type. `theta` must not be either `inf` nor `nan`.
 
 This function is equivalent to computing the trigonometry formula: `cos(theta) + 𝒊 sin(theta)`. Subsequently, it is also the result of Euler's formula: `e^(i * theta) = exp(𝒊 * theta)`. In some details, this is due to the formula's property, which "establishes the relationship between the trignometric functions, and the complex exponential function" (Wikipedia). For more details, please refer to the [Wikipedia](https://en.wikipedia.org/wiki/Euler%27s_formula) page for Euler's formula.
 
@@ -64,6 +64,11 @@ Returns a new `ComplexNumber` object as the result from computing `cis()`. If fa
 ## Methods
 These are methods that can be used by the user.
 
+### :clone(): ComplexNumber
+Creates a new copy of the ComplexNumber object.
+
+Returns a new ComplexNumber object that is a copy of the ComplexNumber object which called this method.
+
 ### :magnitude(): number
 Computes the magnitude (modulus/absolute value) of the ComplexNumber object.
 
@@ -72,7 +77,6 @@ Returns the result.
 Alternatively, you can use the `__len()` metamethod with the `#` operator for the same result.
 
 As of v1.0.0, there is no error handling.
-
 
 ### :argument(): number
 Computes the argument (counter-clockwise angle from the positive real axis) of the ComplexNumber object.
@@ -141,6 +145,15 @@ As of v1.0.0, attempting to use the `%` operator will always throw an error.
 ### .__pow(a: ComplexNumber | number, b: ComplexNumber | number): ComplexNumber
 Creates a new `ComplexNumber` object that is the exponentiation of `a`, and `b`.
 
+Here's a list of every edge cases, and its returned values.
+```
+1. 0 ^ 0						->			1
+2. 0 ^ purely-complex			->			Error: Undefined limit behavior for purely imaginary exponent.
+3. 0 ^ +real					->			0
+4. 0 ^ -real					->			Error: Attempted to perform division by zero.
+```
+*Note: For case 1, and 3, the returned value is a new `ComplexNumber` object.*
+
 Returns the new `ComplexNumber` object. If neither `a`, or `b` is the correct type, throws an error.
 
 ## Metamethods - Equality Comparison
@@ -180,7 +193,7 @@ Alternatively, you can call the `:magnitude()` method with the same result. Inte
 As of v1.0.0, there is no error handling.
 
 ### .__tostring(self: ComplexNumber): string
-Creates a string representation of the `ComplexNumber` object. The display format is similar to that of the `cmath` module in Python.
+Creates a string representation of the `ComplexNumber` object. The display format is in rectangular form, similar to that of the built-in `cmath` module in Python.
 
 Returns the resulting formatted string.
 

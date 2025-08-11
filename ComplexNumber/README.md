@@ -1,7 +1,7 @@
 # Author's note
 Thank you for using the ComplexNumber module!
 
-This was originally made as a coding practice for typechecking, and programming in OOP paradigm using built-in metatables.
+This was originally made as a coding practice for typechecking, and programming in OOP paradigm using built-in metatables. Along with that, it was an opportunity for me to learn complex numbers.
 
 ~ ComplexNumber module made by Abby
 

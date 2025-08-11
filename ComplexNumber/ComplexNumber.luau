@@ -15,9 +15,6 @@ export type ComplexNumber = setmetatable<{
 }, typeof(module)>
 
 
-local pow_res = {math.huge, 1, 0} -- used for __pow()
-local tostring_signs = {"-", "+", "+"} -- used for __tostring()
-
 local function CreateRawComplexNumber(real: number, complex: number): RawComplexNumber
 	return {
 		["real"] = real,
@@ -26,16 +23,19 @@ local function CreateRawComplexNumber(real: number, complex: number): RawComplex
 end
 
 local function GetNumberComponentTypes(candidate: ComplexNumber | number): (boolean, boolean)
-	return TypeCheck.isNumber(candidate::number, true), TypeCheck.isComplexNumber(candidate::ComplexNumber)
+	return TypeCheck.isNumber(candidate::number, false), TypeCheck.isComplexNumber(candidate::ComplexNumber)
 end
 
 
 -- ** CONSTRUCTORS ** --
 
--- Constructor: Creates a new ComplexNumber object. Does not accept inf nor nan.
+--[[
+Constructor: Creates a new <ComplexNumber> object from <real>, and <complex> (rectangular form).
+Both parameters must be a <number> primitive type, and they must not be either inf or nan.
+]]
 module.new = function(real: number, complex: number): ComplexNumber
-	assert(TypeCheck.isNumber(real, false), `Failed to construct a new ComplexNumber. Expected number type for real part (arg #1), got {typeof(real)}.`)
-	assert(TypeCheck.isNumber(complex, false), `Failed to construct a new ComplexNumber. Expected number type for complex part (arg #2), got {typeof(complex)}.`)
+	assert(TypeCheck.isNumber(real, false), `Failed to construct a new <ComplexNumber> object. Expected number type for real part (arg #1), got {typeof(real)}.`)
+	assert(TypeCheck.isNumber(complex, false), `Failed to construct a new <ComplexNumber> object. Expected number type for complex part (arg #2), got {typeof(complex)}.`)
 	
 	local new = CreateRawComplexNumber(real, complex)
 	return setmetatable(new, module)
@@ -43,23 +43,41 @@ end
 
 local complexUnit = module.new(0, 1)
 
--- Constructor: Creates a new ComplexNumber object from a valid RawComplexNumber type.
+--[[
+Constructor: Creates a new <ComplexNumber> object from a valid <RawComplexNumber> type.
+A valid <RawComplexNumber> type is a table with both a <real> key, and a <complex> key. Refer to type definitions in documentation for more details.
+Both keys must be a <number> primitive type, and they must not be either inf or nan.
+]]
 module.fromRaw = function(raw: RawComplexNumber): ComplexNumber
-	assert(TypeCheck.isComplexNumber(raw), `Failed to construct a new ComplexNumber. Expected RawComplexNumber type (arg #1), got {typeof(raw)}`)
+	assert(TypeCheck.isComplexNumber(raw), `Failed to construct a new <ComplexNumber> object. Expected <RawComplexNumber> type (arg #1), got {typeof(raw)}`)
 	
 	local new = CreateRawComplexNumber(raw.real, raw.complex)
 	return setmetatable(new, module)
 end
 
+--[[
+Constructor: Creates a new <ComplexNumber> object from <magnitude>, and <argument> (in radians) (polar form).
+Both parameters must be a <number> primitive type, and they must not be either inf or nan.
+]]
+module.fromPolar = function(magnitude: number, argument: number): ComplexNumber
+	assert(TypeCheck.isNumber(magnitude, false), `Failed to construct a new <ComplexNumber> object. Expected number primitive type (arg #1), got {typeof(magnitude)}`)
+	assert(TypeCheck.isNumber(argument, false), `Failed to construct a new <ComplexNumber> object. Expected number primitive type (arg #1), got {typeof(argument)}`)
+	
+	local real = magnitude * math.cos(argument)
+	local complex = magnitude * math.sin(argument)
+	
+	local new = CreateRawComplexNumber(real, complex)
+	return setmetatable(new, module)
+end
 
 -- ** FUNCTIONS ** --
 
 --[[
-Function: Computes the trigonometric function cis(theta).
+Function: Computes the trigonometric function `cis(theta)` with angle <theta> (in radians).
 Equivalent to computing 'cos(theta) + 𝒊 sin(theta)', or Euler's formula.
 ]]
 module.cis = function(theta: number): ComplexNumber
-	assert(TypeCheck.isNumber(theta, false), `Failed to compute cis trig function. Expected number type (arg #1), got {typeof(theta)}`)
+	assert(TypeCheck.isNumber(theta, false), `Failed to compute \`cis()\` trig function. Expected number type (arg #1), got {typeof(theta)}`)
 	
 	local cosine = math.cos(theta)
 	local sine = math.sin(theta) * complexUnit
@@ -69,25 +87,30 @@ end
 
 -- ** METHODS ** --
 
+-- Method: Creates a new <ComplexNumber> object, whose real, and imaginary parts are from <self>.
+module.clone = function(self: ComplexNumber): ComplexNumber
+	return module.new(self.real, self.complex)
+end
+
 --[[
-Method: Computes the modulus (magnitude, or absolute value) of the ComplexNumber object.
-Similarly, using # operator on a ComplexNumber object returns this result.
+Method: Computes the modulus (magnitude, or absolute value) of <self>, the <ComplexNumber> object which called this method.
+Similarly, using # operator on a <ComplexNumber> object returns this result.
 ]]
 module.magnitude = function(self: ComplexNumber): number
 	return math.sqrt(self.real^2 + self.complex^2)
 end
 
--- Method: Computes the complex argument (counter-clockwise angle from the positive real axis) of the ComplexNumber object.
+-- Method: Computes the complex argument (counter-clockwise angle from the positive real axis) of <self>, the <ComplexNumber> object which called this method.
 module.argument = function(self: ComplexNumber): number
 	return math.atan2(self.complex, self.real)
 end
 
--- Method: Creates a new ComplexNumber object that is the complex conjugate to the ComplexNumber object which this method was called on.
+-- Method: Creates a new <ComplexNumber> object that is the complex conjugate of <self>, the <ComplexNumber> object which called this method.
 module.conjugate = function(self: ComplexNumber): ComplexNumber
 	return module.new(self.real, -self.complex)
 end
 
--- Method: Returns both the magnitude, and the complex argument.
+-- Method: Returns both the magnitude, and the complex argument of <self>, the <ComplexNumber> object which called this method.
 module.polar = function(self: ComplexNumber): (number, number)
 	local r = self:magnitude()
 	local phi = self:argument()
@@ -100,7 +123,7 @@ end
 module.__index = module
 
 module.__newindex = function()
-	error("Attempted to create a new key/index in a ComplexNumber object.")
+	error("Attempted to create a new key/index in a <ComplexNumber> object.")
 end
 
 module.__metatable = "ComplexNumber"
@@ -191,7 +214,7 @@ module.__div = function(a: ComplexNumber | number, b: ComplexNumber | number): C
 	a = a :: ComplexNumber
 	b = b :: ComplexNumber
 	
-	assert(b.real ~= 0 and b.complex ~= 0, "division by zero")
+	assert(b.real ~= 0 and b.complex ~= 0, "Attempted to perform division by zero.")
 	
 	local real_numerator = a.real * b.real + a.complex * b.complex
 	local complex_numerator = a.complex * b.real - a.real * b.complex
@@ -234,21 +257,36 @@ module.__pow = function(a: ComplexNumber | number, b: ComplexNumber | number): C
 	a = a :: ComplexNumber
 	b = b :: ComplexNumber
 	
-	-- edge case base = 0
+	-- edge case: 0 ^ complex
 	if a.real == 0 and a.complex == 0 then
-		local sign = math.sign(b.real)
-		return module.new(pow_res[sign + 2], 0)
 		
-	-- edge case exponent = 0
+		-- case: 0 ^ 0
+		if b.real == 0 and b.complex == 0 then
+			return module.new(1, 0)
+			
+		-- case: 0 ^ (purely-complex)
+		elseif b.real == 0 and b.complex ~= 0 then
+			error(`Undefined limit behavior for purely imaginary exponent.`)
+			
+		-- case: 0 ^ +real
+		elseif b.real > 0 then
+			return module.new(0, 0)
+			
+		-- case: 0 ^ -real
+		elseif b.real < 0 then
+			error(`Attempted to perform division by zero.`)
+		end
+		
+	-- simple case: complex ^ 0
 	elseif b.real == 0 and b.complex == 0 then
 		return module.new(1, 0)
+		
+	-- simple case: real ^ real
+	elseif a.complex == 0 and b.complex == 0 then
+		return module.new(a.real ^ b.real, 0)
 	end
 	
-	-- case (purely-real)^(purely-real)
-	if a.complex == 0 and b.complex == 0 then
-		return module.new(a.real^b.real, 0)
-	end
-	
+	-- main case: complex ^ complex
 	local base_magnitude_squared = a.real^2 + a.complex^2
 	local base_argument = a:argument()
 	
@@ -288,8 +326,9 @@ module.__unm = function(a: ComplexNumber): ComplexNumber
 	return a
 end
 
+local meta_tostring_signs = {"-", "+", "+"}
 module.__tostring = function(self: ComplexNumber): string
-	local complex_sign = tostring_signs[math.sign(self.complex) + 2]
+	local complex_sign = meta_tostring_signs[math.sign(self.complex) + 2]
 	local complex_number = math.abs(self.complex)
 	
 	return `({self.real} {complex_sign} {complex_number}𝒊)`
