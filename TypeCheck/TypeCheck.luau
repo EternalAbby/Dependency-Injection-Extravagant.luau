@@ -8,8 +8,14 @@ type RawComplexNumber = {
 	["complex"]: number
 }
 
+-- This type is taken from the ComplexNumber module.
+type ComplexNumber = setmetatable<{
+	["real"]: number,
+	["complex"]: number
+}, {__metatable: "ComplexNumber"}>
+
 module.isString = function(candidate: string?): boolean
-	if not candidate or typeof(candidate) ~= "string" then
+	if typeof(candidate) ~= "string" then
 		return false
 	end
 	
@@ -17,7 +23,7 @@ module.isString = function(candidate: string?): boolean
 end
 
 module.isNumber = function(candidate: number?, allowSpecial: boolean?): boolean
-	if not candidate or typeof(candidate) ~= "number" then
+	if typeof(candidate) ~= "number" then
 		return false
 	end
 	
@@ -30,17 +36,38 @@ module.isNumber = function(candidate: number?, allowSpecial: boolean?): boolean
 	return true
 end
 
--- This function is used for the ComplexNumber module
-module.isComplexNumber = function(candidate: RawComplexNumber?): boolean
-	if not (candidate and typeof(candidate) == "table") then
+-- This function is used in the ComplexNumber module.
+module.isRawComplexNumber = function(candidate: RawComplexNumber?): boolean
+	if typeof(candidate) ~= "table" then
 		return false
 	end
 	
-	if not candidate.real or not module.isNumber(candidate.real, false) then
+	if not module.isNumber(candidate.real, false) then
 		return false
 	end
 	
-	if not candidate.complex or not module.isNumber(candidate.complex, false) then
+	if not module.isNumber(candidate.complex, false) then
+		return false
+	end
+	
+	return true
+end
+
+-- This function is used in the ComplexNumber module.
+module.isComplexNumber = function(candidate: ComplexNumber?): boolean
+	if typeof(candidate) ~= "table" then
+		return false
+	end
+	
+	if getmetatable(candidate) ~= "ComplexNumber" then
+		return false
+	end
+	
+	if not module.isNumber(candidate.real, false) then
+		return false
+	end
+	
+	if not module.isNumber(candidate.complex, false) then
 		return false
 	end
 	
@@ -48,14 +75,11 @@ module.isComplexNumber = function(candidate: RawComplexNumber?): boolean
 end
 
 module.isBoolean = function(candidate: boolean | nil, exclude_nil: boolean?): boolean
-	if typeof(candidate) ~= "boolean" and typeof(candidate) ~= "nil" then
-		return false
+	if not exclude_nil and typeof(candidate) == "nil" then
+		return true
 	end
 	
-	if candidate == true or candidate == false then
-		return true
-		
-	elseif not exclude_nil and candidate == nil then
+	if typeof(candidate) == "boolean" then
 		return true
 	end
 	
@@ -63,15 +87,15 @@ module.isBoolean = function(candidate: boolean | nil, exclude_nil: boolean?): bo
 end
 
 module.isTable = function(candidate: {[any]: any}): boolean
-	if not (candidate and typeof(candidate) == "table") then
+	if typeof(candidate) ~= "table" then
 		return false
 	end
 	
 	return true
 end
 
-module.isArray = function(candidate: {[number]: any}, ignore_PrerequsiteChecks: boolean?): boolean
-	if not ignore_PrerequsiteChecks and not module.isTable(candidate) then
+module.isArray = function(candidate: {[number]: any}, ignore_PrerequisiteChecks: boolean?): boolean
+	if not ignore_PrerequisiteChecks and typeof(candidate) ~= "table" then
 		return false
 	end
 	
@@ -94,8 +118,8 @@ module.isArray = function(candidate: {[number]: any}, ignore_PrerequsiteChecks: 
 	return true
 end
 
-module.isDictionary = function(candidate: {[any]: any}, ignore_PrerequsiteChecks: boolean?): boolean
-	if not ignore_PrerequsiteChecks and not module.isTable(candidate) then
+module.isDictionary = function(candidate: {[any]: any}, ignore_PrerequisiteChecks: boolean?): boolean
+	if not ignore_PrerequisiteChecks and typeof(candidate) ~= "table" then
 		return false
 	end
 	
@@ -107,16 +131,12 @@ module.isDictionary = function(candidate: {[any]: any}, ignore_PrerequsiteChecks
 	return true
 end
 
-module.isRBXObject = function(candidate: Object?, classname: string?): boolean
-	if not candidate or typeof(candidate) ~= "Instance" then
+module.isInstance = function(candidate: Instance?, classname: string?): boolean
+	if typeof(candidate) ~= "Instance" then
 		return false
 	end
 	
-	if not candidate:IsA("Object") then
-		return false
-	end
-	
-	if classname and module.isString(classname) and candidate.ClassName ~= classname then
+	if typeof(classname) == "string" and candidate.ClassName ~= classname then
 		return false
 	end
 	
