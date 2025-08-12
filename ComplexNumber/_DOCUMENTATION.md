@@ -34,21 +34,39 @@ These are constructors that can be used by the user.
 ### .new(real: number, complex: number): ComplexNumber
 Creates a new `ComplexNumber` object from `real`, and `complex`.
 
-`real`, and `complex` are `number` primitive type. Both `real`, and `complex` **must not** be `math.huge` (inf), `-math.huge` (-inf), or `nan` (not a number) as their respective value.
+`real`, and `complex` are `number` primitive types. Both `real`, and `complex` **must not** be `math.huge` (inf), `-math.huge` (-inf), or `nan` (not a number) as their respective value.
+
+The accepted expression of this constructor is in both the general form, and the rectangular form (with `real`, and `complex` be substituted by the coordinates of the x-axis, and the y-axis of the complex number on the complex plane respectively)
 
 Returns the new `ComplexNumber` object. If failed, throws an error.
 
-Alternatively, for constructing a new `ComplexNumber` from a valid `RawComplexNumber` type, you can use the `.fromRaw()` constructor instead.
+Alternatively, for constructing a new `ComplexNumber` object;
+- From a valid `RawComplexNumber` type, use the `.fromRaw()` constructor instead.
+- From the polar form, use the `.fromPolar()` constructor instead.
 
 ### .fromRaw(raw: RawComplexNumber): ComplexNumber
 Creates a new `ComplexNumber` object from `raw`.
 
-`raw` must be a `table` primitive type, and must have a key named `real`, and `complex` with their respective type. If there are any other keys in `raw`, they are ignored.
+`raw` must be a `table` primitive type that can be read via `table[idx]`, and must have a key named `real`, and `complex` with their respective type. Other keys in `raw` are ignored, if there are any. Refer to `Definitions` for its structure.
+
+`real`, and `complex` are `number` primitive types. Both `real`, and `complex` **must not** be `math.huge` (inf), `-math.huge` (-inf), or `nan` (not a number) as their respective value.
 
 Returns the new `ComplexNumber` object. If failed, throws an error.
 
-Alternatively, for constructing a new `ComplexNumber` from two `number` primitive types, you can use the `.new()` constructor instead.
+Alternatively, for constructing a new `ComplexNumber` object;
+- From the general/rectangular form, use the `.new()` constructor instead.
+- From the polar form, use the `.fromPolar()` constructor instead.
 
+### .fromPolar(magnitude: number, argument: number): ComplexNumber
+Creates a new `ComplexNumber` object from `magnitude`, and `argument` (angle is in radians).
+
+`magnitude`, and `argument` are `number` primitive types. Both `magnitude`, and `argument` **must not** be `math.huge` (inf), `-math.huge` (-inf), or `nan` (not a number) as their respective value.
+
+Returns the new `ComplexNumber` object. If failed, throws an error.
+
+Alternatively, for constructing a new `ComplexNumber` object;
+- From the general/rectangular form, use the `.new()` constructor instead.
+- From a valid `RawComplexNumber` type, use the `.fromRaw()` constructor instead.
 
 ## Functions
 These are functions that can be used by the user.
@@ -65,39 +83,37 @@ Returns a new `ComplexNumber` object as the result from computing `cis()`. If fa
 These are methods that can be used by the user.
 
 ### :clone(): ComplexNumber
-Creates a new copy of the ComplexNumber object.
+Creates a new copy of the `ComplexNumber` object.
 
-Returns a new ComplexNumber object that is a copy of the ComplexNumber object which called this method.
+Returns a new `ComplexNumber` object, whose components are from the `ComplexNumber` object, which called this method.
 
 ### :magnitude(): number
-Computes the magnitude (modulus/absolute value) of the ComplexNumber object.
+Computes the magnitude (modulus/absolute value) of the `ComplexNumber` object.
 
 Returns the result.
 
 Alternatively, you can use the `__len()` metamethod with the `#` operator for the same result.
-
-As of v1.0.0, there is no error handling.
 
 ### :argument(): number
 Computes the argument (counter-clockwise angle from the positive real axis) of the ComplexNumber object.
 
 Returns the result.
 
-As of v1.0.0, there is no error handling.
-
 ### :conjugate(): number
 Creates a new ComplexNumber object that is the complex conjugate to the ComplexNumber object which this method was called on.
 
 Returns the result.
-
-As of v1.0.0, there is no error handling.
 
 ### :polar(): (number, number)
 Computes both the magnitude, and the complex argument.
 
 Returns the result
 
-As of v1.0.0, there is no error handling.
+
+## Raw Methods
+These are raw methods that can be used by the user. These methods are similar to their metamethod counterparts, except they will modify the left-most operand. Operations are performed from left to right. All raw methods can also be used on valid `RawComplexNumber` types.
+
+-- TBA --
 
 ## Metamethods
 These are metamethods that can be used by the user.
