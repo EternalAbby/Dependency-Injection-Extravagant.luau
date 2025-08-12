@@ -430,6 +430,15 @@ module.raw_ge = function(self: RawComplexNumber?, ...: RawComplexNumber?): boole
 	return true
 end
 
+
+module.raw_conjugate = function(self: RawComplexNumber?): nil
+	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_conjugate()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
+	
+	self.complex = -self.complex
+	
+	return nil
+end
+
 -- RawMethod: Modify the components of <self> to its additive inverse.
 module.raw_unm = function(self: RawComplexNumber?): nil
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_unm()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
