@@ -1,6 +1,6 @@
 --!strict
 
-local TypeCheck = require(script.Parent.TypeCheck)
+local TypeCheck = require("../TypeCheck/TypeCheck")
 
 local tostring_signs = {"-", "+", "+"}
 
@@ -434,6 +434,8 @@ end
 module.raw_conjugate = function(self: RawComplexNumber?): nil
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_conjugate()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
+	self = self :: RawComplexNumber
+	
 	self.complex = -self.complex
 	
 	return nil
@@ -492,8 +494,8 @@ module.__add = function(a: ComplexNumber | number, b: ComplexNumber | number): C
 	local isnum_A, iscomplex_A = GetNumberComponentTypes(a)
 	local isnum_B, iscomplex_B = GetNumberComponentTypes(b)
 	
-	assert(isnum_A or iscomplex_A)
-	assert(isnum_B or iscomplex_B)
+	assert(isnum_A or iscomplex_A, `Failed to perform \`__add()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <a> (arg #1), got <{typeof(a)}>.`)
+	assert(isnum_B or iscomplex_B, `Failed to perform \`__add()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <b> (arg #2), got <{typeof(b)}>.`)
 	
 	if isnum_A then
 		a = CreateRawComplexNumber(a::number, 0) :: ComplexNumber
@@ -515,8 +517,8 @@ module.__sub = function(a: ComplexNumber | number, b: ComplexNumber | number): C
 	local isnum_A, iscomplex_A = GetNumberComponentTypes(a)
 	local isnum_B, iscomplex_B = GetNumberComponentTypes(b)
 	
-	assert(isnum_A or iscomplex_A)
-	assert(isnum_B or iscomplex_B)
+	assert(isnum_A or iscomplex_A, `Failed to perform \`__sub()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <a> (arg #1), got <{typeof(a)}>.`)
+	assert(isnum_B or iscomplex_B, `Failed to perform \`__sub()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <b> (arg #2), got <{typeof(b)}>.`)
 	
 	if isnum_A then
 		a = CreateRawComplexNumber(a::number, 0) :: ComplexNumber
@@ -538,8 +540,8 @@ module.__mul = function(a: ComplexNumber | number, b: ComplexNumber | number): C
 	local isnum_A, iscomplex_A = GetNumberComponentTypes(a)
 	local isnum_B, iscomplex_B = GetNumberComponentTypes(b)
 	
-	assert(isnum_A or iscomplex_A)
-	assert(isnum_B or iscomplex_B)
+	assert(isnum_A or iscomplex_A, `Failed to perform \`__mul()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <a> (arg #1), got <{typeof(a)}>.`)
+	assert(isnum_B or iscomplex_B, `Failed to perform \`__mul()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <b> (arg #2), got <{typeof(b)}>.`)
 	
 	if isnum_A then
 		a = CreateRawComplexNumber(a::number, 0) :: ComplexNumber
@@ -561,8 +563,8 @@ module.__div = function(a: ComplexNumber | number, b: ComplexNumber | number): C
 	local isnum_A, iscomplex_A = GetNumberComponentTypes(a)
 	local isnum_B, iscomplex_B = GetNumberComponentTypes(b)
 	
-	assert(isnum_A or iscomplex_A)
-	assert(isnum_B or iscomplex_B)
+	assert(isnum_A or iscomplex_A, `Failed to perform \`__div()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <a> (arg #1), got <{typeof(a)}>.`)
+	assert(isnum_B or iscomplex_B, `Failed to perform \`__div()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <b> (arg #2), got <{typeof(b)}>.`)
 	
 	if isnum_A then
 		a = CreateRawComplexNumber(a::number, 0) :: ComplexNumber
@@ -573,7 +575,7 @@ module.__div = function(a: ComplexNumber | number, b: ComplexNumber | number): C
 	a = a :: ComplexNumber
 	b = b :: ComplexNumber
 	
-	assert(b.real ~= 0 and b.complex ~= 0, "Attempted to perform division by zero.")
+	assert(b.real ~= 0 and b.complex ~= 0, `Failed to perform \`__div()\` metamethod. Attempted to perform division by zero. Expected non-zero complex number for <b> (arg #2).`)
 	
 	local real_numerator = a.real * b.real + a.complex * b.complex
 	local complex_numerator = a.complex * b.real - a.real * b.complex
@@ -604,8 +606,8 @@ module.__pow = function(a: ComplexNumber | number, b: ComplexNumber | number): C
 	local isnum_A, iscomplex_A = GetNumberComponentTypes(a)
 	local isnum_B, iscomplex_B = GetNumberComponentTypes(b)
 	
-	assert(isnum_A or iscomplex_A)
-	assert(isnum_B or iscomplex_B)
+	assert(isnum_A or iscomplex_A, `Failed to perform \`__pow()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <a> (arg #1), got <{typeof(a)}>.`)
+	assert(isnum_B or iscomplex_B, `Failed to perform \`__pow()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <b> (arg #2), got <{typeof(b)}>.`)
 	
 	if isnum_A then
 		a = CreateRawComplexNumber(a::number, 0) :: ComplexNumber
@@ -657,30 +659,40 @@ end
 
 
 module.__eq = function(a: ComplexNumber, b: ComplexNumber): boolean
-	local magnitude_A = a:magnitude()
-	local magnitude_B = b:magnitude()
+	assert(TypeCheck.isComplexNumber(a), `Failed to perform \`__le()\` metamethod. Expected <ComplexNumber> type for <a> (arg #1), got <{typeof(a)}>.`)
+	assert(TypeCheck.isComplexNumber(b), `Failed to perform \`__le()\` metamethod. Expected <ComplexNumber> type for <b> (arg #2), got <{typeof(b)}>.`)
+	
+	local magnitude_A = math.sqrt(a.real ^ 2 + a.complex ^ 2)
+	local magnitude_B = math.sqrt(b.real ^ 2 + b.complex ^ 2)
 	return magnitude_A == magnitude_B
 end
 
 module.__lt = function(a: ComplexNumber, b: ComplexNumber): boolean
-	local magnitude_A = a:magnitude()
-	local magnitude_B = b:magnitude()
+	assert(TypeCheck.isComplexNumber(a), `Failed to perform \`__le()\` metamethod. Expected <ComplexNumber> type for <a> (arg #1), got <{typeof(a)}>.`)
+	assert(TypeCheck.isComplexNumber(b), `Failed to perform \`__le()\` metamethod. Expected <ComplexNumber> type for <b> (arg #2), got <{typeof(b)}>.`)
+	
+	local magnitude_A = math.sqrt(a.real ^ 2 + a.complex ^ 2)
+	local magnitude_B = math.sqrt(b.real ^ 2 + b.complex ^ 2)
 	return magnitude_A < magnitude_B
 end
 
 module.__le = function(a: ComplexNumber, b: ComplexNumber): boolean
-	local magnitude_A = a:magnitude()
-	local magnitude_B = b:magnitude()
+	assert(TypeCheck.isComplexNumber(a), `Failed to perform \`__le()\` metamethod. Expected <ComplexNumber> type for <a> (arg #1), got <{typeof(a)}>.`)
+	assert(TypeCheck.isComplexNumber(b), `Failed to perform \`__le()\` metamethod. Expected <ComplexNumber> type for <b> (arg #2), got <{typeof(b)}>.`)
+	
+	local magnitude_A = math.sqrt(a.real ^ 2 + a.complex ^ 2)
+	local magnitude_B = math.sqrt(b.real ^ 2 + b.complex ^ 2)
 	return magnitude_A <= magnitude_B
 end
 
 
 module.__len = function(self: ComplexNumber): number
-	return self:magnitude()
+	assert(TypeCheck.isComplexNumber(self), `Failed to perform \`__len()\` metamethod. Expected <ComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
+	return math.sqrt(self.real ^ 2 + self.complex ^ 2)
 end
 
 module.__unm = function(self: ComplexNumber): ComplexNumber
-	assert(TypeCheck.isComplexNumber(self))
+	assert(TypeCheck.isComplexNumber(self), `Failed to perform \`__unm()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <a> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: ComplexNumber
 	
@@ -691,6 +703,8 @@ module.__unm = function(self: ComplexNumber): ComplexNumber
 end
 
 module.__tostring = function(self: ComplexNumber): string
+	assert(TypeCheck.isComplexNumber(self), `Failed to perform \`__tostring()\` metamethod. Expected <ComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
+	
 	local complex_sign = tostring_signs[math.sign(self.complex) + 2]
 	local complex_number = math.abs(self.complex)
 	
