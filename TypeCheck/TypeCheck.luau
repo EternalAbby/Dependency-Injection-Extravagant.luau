@@ -14,7 +14,7 @@ type ComplexNumber = setmetatable<{
 	["complex"]: number
 }, {__metatable: "ComplexNumber"}>
 
-module.isString = function(candidate: string?): boolean
+module.isString = function(candidate: string): boolean
 	if typeof(candidate) ~= "string" then
 		return false
 	end
@@ -22,7 +22,7 @@ module.isString = function(candidate: string?): boolean
 	return true
 end
 
-module.isNumber = function(candidate: number?, allowSpecial: boolean?): boolean
+module.isNumber = function(candidate: number, allowSpecial: boolean?): boolean
 	if typeof(candidate) ~= "number" then
 		return false
 	end
@@ -37,7 +37,7 @@ module.isNumber = function(candidate: number?, allowSpecial: boolean?): boolean
 end
 
 -- This function is used in the ComplexNumber module.
-module.isRawComplexNumber = function(candidate: RawComplexNumber?): boolean
+module.isRawComplexNumber = function(candidate: RawComplexNumber): boolean
 	if typeof(candidate) ~= "table" then
 		return false
 	end
@@ -54,7 +54,7 @@ module.isRawComplexNumber = function(candidate: RawComplexNumber?): boolean
 end
 
 -- This function is used in the ComplexNumber module.
-module.isComplexNumber = function(candidate: ComplexNumber?): boolean
+module.isComplexNumber = function(candidate: ComplexNumber): boolean
 	if typeof(candidate) ~= "table" then
 		return false
 	end
@@ -131,7 +131,7 @@ module.isDictionary = function(candidate: {[any]: any}, ignore_PrerequisiteCheck
 	return true
 end
 
-module.isInstance = function(candidate: Instance?, classname: string?): boolean
+module.isInstance = function(candidate: Instance, classname: string?): boolean
 	if typeof(candidate) ~= "Instance" then
 		return false
 	end
