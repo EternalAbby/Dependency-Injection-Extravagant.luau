@@ -163,35 +163,39 @@ It is possible to specify as many valid `RawComplexNumber` object, and valid `Co
 
 Some raw methods are similar to their `Method`, and `Metamethod` counterparts, except they will modify the left-most operand components, or `self`, instead of creating a new `ComplexNumber` object. These modifications are done so that it doesn't exhaust memory usages.
 
+Some raw methods are similar to their `Method` counterparts, except they allow valid `RawComplexNumber` objects as their parameters.
+
 As of v1.1.0, support for `number` primitive types are not implemented, yet. However, you can easily create a `RawComplexNumber` object as a workaround for now.
 
 ## Raw Methods - Basic Arithmetic Operation
 
 This sub-section includes every raw methods that are the equivalent counterparts of the `Metamethods - Basic Arithmetic Operation` section.
 
-### :raw_unm(self: RawComplexNumber?): nil
+### :raw_unm(self: RawComplexNumber): nil
 
 Modify the components of `self` to its additive inverse.
 
-### :raw_add(self: RawComplexNumber?, ...: RawComplexNumber?): nil
+Returns `nil`.
+
+### :raw_add(self: RawComplexNumber, ...: RawComplexNumber): nil
 
 Modify the components of `self` by performing addition to it for each operand.
 
 Returns `nil`.
 
-### :raw_sub(self: RawComplexNumber?, ...: RawComplexNumber?): nil
+### :raw_sub(self: RawComplexNumber, ...: RawComplexNumber): nil
 
 Modify the components of `self` by performing subtraction to it for each operand.
 
 Returns `nil`.
 
-### :raw_mul(self: RawComplexNumber?, ...: RawComplexNumber?): nil
+### :raw_mul(self: RawComplexNumber, ...: RawComplexNumber): nil
 
 Modify the components of `self` by performing multiplication to it for each operand.
 
 Returns `nil`.
 
-### :raw_div(self: RawComplexNumber?, ...: RawComplexNumber?): nil
+### :raw_div(self: RawComplexNumber, ...: RawComplexNumber): nil
 
 Modify the components of `self` by performing division to it for each operand.
 
@@ -199,7 +203,7 @@ At any point, attempting to divide by 0 (0 + 0𝒊) will throw an error.
 
 Returns `nil`.
 
-### :raw_idiv(self: RawComplexNumber?, ...: RawComplexNumber?): nil
+### :raw_idiv(self: RawComplexNumber, ...: RawComplexNumber): nil
 
 Modify the components of `self` by performing int division to it for each operand.
 
@@ -215,7 +219,7 @@ Although this raw method is defined in the source code, it does not have any fun
 
 As of v1.1.0, attempting to use this raw method will always throw an error.
 
-### :raw_pow(self: RawComplexNumber?, ...: RawComplexNumber?): nil
+### :raw_pow(self: RawComplexNumber, ...: RawComplexNumber): nil
 
 Modify the components of `self` by performing exponentiation to it for each operand.
 
@@ -227,55 +231,91 @@ Returns `nil`.
 
 This sub-section includes every raw methods that are the equivalent counterparts of the `Metamethods - Equality Comparison` section.
 
-### :raw_eq(self: RawComplexNumber?, ...: RawComplexNumber?): boolean
+### :raw_eq(self: RawComplexNumber, ...: RawComplexNumber): boolean
 
 Returns a `boolean` determining whether `self` is equivalent to every operands by comparing the `magnitude`.
 
-### :raw_lt(self: RawComplexNumber?, ...: RawComplexNumber?): boolean
+### :raw_lt(self: RawComplexNumber, ...: RawComplexNumber): boolean
 
 Returns a `boolean` determining whether `self` is less than every operands by comparing the `magnitude`.
 
-### :raw_le(self: RawComplexNumber?, ...: RawComplexNumber?): boolean
+### :raw_le(self: RawComplexNumber, ...: RawComplexNumber): boolean
 
 Returns a `boolean` determining whether `self` is less than or equal to every operands by comparing the `magnitude`.
 
-### :raw_gt(self: RawComplexNumber?, ...: RawComplexNumber?): boolean
+### :raw_gt(self: RawComplexNumber, ...: RawComplexNumber): boolean
 
 Returns a `boolean` determining whether `self` is greater than every operands by comparing the `magnitude`.
 
-### :raw_ge(self: RawComplexNumber?, ...: RawComplexNumber?): boolean
+### :raw_ge(self: RawComplexNumber, ...: RawComplexNumber): boolean
 
 Returns a `boolean` determining whether `self` is greater than or equal to every operands by comparing the `magnitude`.
 
-## Raw Methods - Other
+## Raw Methods - From Method
 
-### :raw_conjugate(self: RawComplexNumber?): nil
+This sub-section includes every raw methods that are the equivalent counterparts of the `Methods` section.
 
-Modify the complex part of `self` to its conjugate.
+### :raw_magnitude(self: RawComplexNumber): number
+
+Similar to `:magnitude` method.
+
+Returns the result.
+
+### :raw_argument(self: RawComplexNumber): number
+
+Similar to `:argument` method.
+
+Returns the result.
+
+### :raw_conjugate(self: RawComplexNumber): nil
+
+Modify `self` to its conjugate.
 
 Returns `nil`
 
-### :raw_tostring(self: RawComplexNumber?, representation: ("general" | "rectangular" | "polar")?): string
+## Raw Methods - Other
 
-Creates a new `string` that is formatted to display `self`, according to `representation` parameter. By default, `representation` is set to display in the `"general"` form. If `representation` is not set, or it is set to an invalid mode, the default will be used.
+### :raw_tostring(self: RawComplexNumber, representation: ("general" | "rectangular" | "polar" | "euler")?): string
+
+Creates a new `string` that is formatted to display `self`, according to `representation` parameter.
+
+By default, `representation` is set to display in the `"general"` form. If `representation` is not set, or it is set to an invalid mode, the default will be used.
 
 Returns the formatted `string` to display `self`.
 
 ## Metamethods
 
-These are metamethods defined within the module. These can be used by the users by following the syntatic sugar of traditional metamethods.
+These are metamethods defined within the module. These can be used by the users by following the syntactic sugar of traditional metamethods.
 
 Some metamethods create a new `ComplexNumber` object to store their result. This allows easier access to the original `ComplexNumber` objects that performed those operations. If this functionality is undesirable, please refer to the `Raw Methods` section, includes equivalent methods to ones listed here, but modify the components of `self` instead.
 
+## Metamethods - Initial
+
+These are essentially properties within the `metatable` for `ComplexNumber` objects.
+
+### .__index()
+
+This is pointed back into the module.
+
+This allows **O**bject-**O**rientated **P**rogramming (OOP), and syntactic sugars for `ComplexNumber` objects.
+
+### .__newindex()
+
+Throws an error if you attempt to create a new key/index.
+
+### .__metatable
+
+Returns the string `"ComplexNumber"` when using `getmetatable()` on a `ComplexNumber` object.
+
 ## Metamethods - Basic Arithmetic Operation
 
-These metamethods define the syntatic sugar for `ComplexNumber` objects to perform basic arithmetic operations.
+These metamethods define the syntactic sugar for `ComplexNumber` objects to perform basic arithmetic operations.
 
 ### .__unm(a: ComplexNumber): ComplexNumber
 
 Creates a new `ComplexNumber` object that is the additive inverse of `a`.
 
-Returns the new `ComplexNumber` object.
+Returns the new `ComplexNumber` object. If `a` is not a `ComplexNumber`, throws an error.
 
 ### .__add(a: ComplexNumber | number, b: ComplexNumber | number): ComplexNumber
 
@@ -321,12 +361,12 @@ Creates a new `ComplexNumber` object that is the exponentiation of `a`, and `b`.
 
 Here's a list of every edge cases, and its returned values.
 
-```lua
-1. 0 ^ 0						->			1
-2. 0 ^ purely-complex			->			Error: Undefined limit behavior for purely imaginary exponent.
-3. 0 ^ +real					->			0
-4. 0 ^ -real					->			Error: Attempted to perform division by zero.
-```
+| Index | Edge case          | Result                                                         |
+|-------|--------------------|----------------------------------------------------------------|
+| 1     | 0 ^ 0              | 1 + 0𝒊                                                         |
+| 2     | 0 ^ purely-complex | Error: Undefined limit behavior for purely imaginary exponent. |
+| 3     | 0 ^ +real          | 0 + 0𝒊                                                         |
+| 4     | 0 ^ -real          | Error: Attempted to perform division by zero.                  |
 
 *Note: For case 1, and 3, the returned value is a new `ComplexNumber` object, not a `number` primitive type.*
 
@@ -334,37 +374,39 @@ Returns the new `ComplexNumber` object. If neither `a`, or `b` is the correct ty
 
 ## Metamethods - Equality Comparison
 
+All metamethods compute the magnitude of both `a`, and `b` to compare.
+
 ### .__eq(a: ComplexNumber, b: ComplexNumber): boolean
 
-Determines whether both `a`, and `b` are *equivalent* (or the expression `a == b`). This is done by comparing their magnitude.
+Determines whether both `a`, and `b` are *equivalent* (or the expression `a == b`).
+
+This metamethod only fires when both `a`, and `b` have this `metatable`. For reasons why, refer to this [link here](https://create.roblox.com/docs/luau/metatables#metamethods).
 
 Returns `true` if equivalent. Otherwise, returns `false`.
 
 ### .__lt(a: ComplexNumber, b: ComplexNumber): boolean
 
-Determines whether `a` is *strictly less than* `b` (or the expression `a < b`). This is done by comparing their magnitude.
+Determines whether `a` is *strictly less than* `b` (or the expression `a < b`).
 
-Because this is also used for *strictly greater than*, this metamethod is equivalent to determining whether `b` is *strictly greater than* `a` (or the expression `b > a`).
+This metamethod only fires when both `a`, and `b` have this `metatable`. For reasons why, refer to this [link here](https://create.roblox.com/docs/luau/metatables#metamethods).
+
+Because this is also used for *strictly greater than*, this metamethod is equivalent to determining whether `b` is *strictly greater than* `a` (or the expression `b > a`). For reasons why, they are also outlined in the link above.
 
 Returns `true` if `a` is strictly less than `b`. Otherwise, returns `false`.
 
 ### .__le(a: ComplexNumber, b: ComplexNumber): boolean
 
-Determines whether `a` is *less than or equal to* `b` (or the expression `a <= b`). This is done by comparing their magnitude.
+Determines whether `a` is *less than or equal to* `b` (or the expression `a <= b`).
 
-Because this is also used for *greater than or equal to*, this metamethod is equivalent to determining whether `b` is *greater than or equal to* `a` (or the expression `b >= a`).
+This metamethod only fires when both `a`, and `b` have this `metatable`. For reasons why, refer to this [link here](https://create.roblox.com/docs/luau/metatables#metamethods).
+
+Because this is also used for *greater than or equal to*, this metamethod is equivalent to determining whether `b` is *greater than or equal to* `a` (or the expression `b >= a`). For reasons why, they are also outlined in the link above.
 
 Returns `true` if `a` is less than or equal to `b`. Otherwise, returns `false`.
 
 ## Metamethods - Other
 
-### .__newindex()
-
-Throws an error if you attempt to create a new key/index.
-
-### .__metatable
-
-Returns the string `"ComplexNumber"` when using `getmetatable()` on a `ComplexNumber` object.
+These don't have any proper classifications, so they are placed here.
 
 ### .__len(self: ComplexNumber): number
 
@@ -373,8 +415,6 @@ Computes the magnitude (modulus/absolute value) of the ComplexNumber object.
 Returns the result.
 
 Alternatively, you can call the `:magnitude()` method with the same result. Internally, this metamethod directs to the method.
-
-As of v1.0.0, there is no error handling.
 
 ### .__tostring(self: ComplexNumber): string
 

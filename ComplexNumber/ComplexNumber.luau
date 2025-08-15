@@ -37,7 +37,7 @@ end
 
 --[[
 Constructor: Creates a new <ComplexNumber> object from <real>, and <complex>.
-This expression is in both the general form, and the rectangular form (with <real> as the x-axis, <complex> as the y-axis).
+This expression is valid for both the general form, and the rectangular form.
 Both parameters must be a <number> primitive type, and they must not be either inf or nan.
 ]]
 module.new = function(real: number, complex: number): ComplexNumber
@@ -51,9 +51,8 @@ end
 local complexUnit = module.new(0, 1)
 
 --[[
-Constructor: Creates a new <ComplexNumber> object from a valid <RawComplexNumber> type.
-A valid <RawComplexNumber> type is a table with both a <real> key, and a <complex> key. Refer to type definitions in documentation for more details.
-This expression is in both the general form, and the rectangular form (with <real> as the x-axis, <complex> as the y-axis).
+Constructor: Creates a new <ComplexNumber> object from a valid <RawComplexNumber> type. Refer to Documentation for more details.
+This expression is valid for both the general form, and the rectangular form.
 Both keys must be a <number> primitive type, and they must not be either inf or nan.
 ]]
 module.fromRaw = function(raw: RawComplexNumber): ComplexNumber
@@ -65,7 +64,7 @@ end
 
 --[[
 Constructor: Creates a new <ComplexNumber> object from <magnitude>, and <argument> (in radians).
-This expression is in the polar form. After creation, the <ComplexNumber> object will be in the general form.
+This expression is valid for the polar form. After creation, the <ComplexNumber> object will be in the general form.
 Both parameters must be a <number> primitive type, and they must not be either inf or nan.
 ]]
 module.fromPolar = function(magnitude: number, argument: number): ComplexNumber
@@ -96,15 +95,15 @@ end
 
 -- ** METHODS ** --
 
--- Method: Creates a new <ComplexNumber> object, whose real, and imaginary parts are from <self>.
+-- Method: Creates a new <ComplexNumber> object, whose real, and imaginary parts are copied from <self>.
 module.clone = function(self: ComplexNumber): ComplexNumber
 	assert(TypeCheck.isComplexNumber(self), `Failed to perform \`:clone()\` method. Expected <ComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	return module.new(self.real, self.complex)
 end
 
 --[[
-Method: Computes the modulus (magnitude, or absolute value) of <self>.
-Similarly, using # operator on a <ComplexNumber> object returns this result.
+Method: Computes the magnitude (modulus/absolute value) of <self>.
+Similarly, using `#` operator on a <ComplexNumber> object returns this result.
 ]]
 module.magnitude = function(self: ComplexNumber): number
 	assert(TypeCheck.isComplexNumber(self), `Failed to perform \`:magnitude()\` method. Expected <ComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
@@ -133,6 +132,21 @@ end
 
 
 -- ** RAW METHODS ** --
+
+
+-- ** RAW METHODS - BASIC ARITHMETIC OPERATION ** --
+
+-- RawMethod: Modify the components of <self> to its additive inverse.
+module.raw_unm = function(self: RawComplexNumber): nil
+	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_unm()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
+	
+	self = self :: RawComplexNumber
+	
+	self.real = -self.real
+	self.complex = -self.complex
+	
+	return nil
+end
 
 -- RawMethod: Modify the components of <self> by performing addition to it for each operand.
 module.raw_add = function(self: RawComplexNumber, ...: RawComplexNumber): nil
@@ -310,6 +324,8 @@ module.raw_pow = function(self: RawComplexNumber, ...: RawComplexNumber): nil
 end
 
 
+-- ** RAW METHODS - EQUALITY COMPARISON ** --
+
 -- RawMethod: Returns a boolean determining whether <self> is equivalent to every operands.
 module.raw_eq = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_eq()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
@@ -431,6 +447,24 @@ module.raw_ge = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 end
 
 
+-- ** RAW METHODS - FROM METHOD ** --
+
+-- RawMethod: Computes the magnitude (modulus/absolute value) of <self>. Accepts valid `RawComplexNumber` types.
+module.raw_magnitude = function(self: RawComplexNumber): number
+	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_magnitude()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
+	
+	self = self :: RawComplexNumber
+	
+	return math.sqrt(self.real ^ 2 + self.complex ^ 2)
+end
+
+-- RawMethod: Computes the complex argument (counter-clockwise angle from the positive real axis) of <self>. Accepts valid `RawComplexNumber` types.
+module.raw_argument = function(self: RawComplexNumber): number
+	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_argument()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
+	return math.atan2(self.complex, self.real)
+end
+
+-- RawMethod: Modify `self` to its conjugate.
 module.raw_conjugate = function(self: RawComplexNumber): nil
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_conjugate()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
@@ -441,39 +475,33 @@ module.raw_conjugate = function(self: RawComplexNumber): nil
 	return nil
 end
 
--- RawMethod: Modify the components of <self> to its additive inverse.
-module.raw_unm = function(self: RawComplexNumber): nil
-	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_unm()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
-	
-	self = self :: RawComplexNumber
-	
-	self.real = -self.real
-	self.complex = -self.complex
-	
-	return nil
-end
+
+-- ** RAW METHODS - OTHER ** --
 
 --[[
 RawMethod: Create a <string> representation formatted to display <self>, according to <representation>.
 Optional <representation> can be either "general", "rectangular", "polar". By default, always displays in "general" form.
 ]]
-module.raw_tostring = function(self: RawComplexNumber, representation: ("general" | "rectangular" | "polar")?): string
+module.raw_tostring = function(self: RawComplexNumber, representation: ("general" | "rectangular" | "polar" | "euler")?): string
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_tostring()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
-	representation = representation :: ("general" | "rectangular" | "polar")
+	representation = representation :: ("general" | "rectangular" | "polar" | "euler")
 	
 	if representation == "rectangular" then
-		local complex_sign = tostring_signs[math.sign(self.complex) + 2]
-		local complex_number = math.abs(self.complex)
-		
-		return `({self.real}x {complex_sign} {complex_number}y)`
+		return `({self.real}, {self.complex})`
 		
 	elseif representation == "polar" then
 		local magnitude = math.sqrt(self.real ^ 2 + self.complex ^ 2)
 		local argument = math.atan2(self.complex, self.real)
 		
-		return `{magnitude} ∠ {argument}`
+		return `{magnitude} 𝐜𝐢𝐬 {argument}`
+		
+	elseif representation == "euler" then
+		local magnitude = math.sqrt(self.real ^ 2 + self.complex ^ 2)
+		local argument = math.atan2(self.complex, self.real)
+		
+		return `{magnitude} 𝒆^({argument}𝒊)`
 	end
 	
 	local complex_sign = tostring_signs[math.sign(self.complex) + 2]
@@ -484,6 +512,9 @@ end
 
 -- ** METAMETHODS ** --
 
+
+-- ** METAMETHOD - INITIAL ** --
+
 module.__index = module
 
 module.__newindex = function(t: ComplexNumber, key: any, value: any): nil
@@ -492,6 +523,19 @@ end
 
 module.__metatable = "ComplexNumber"
 
+
+-- ** METAMETHOD - BASIC ARITHMETIC OPERATION ** --
+
+module.__unm = function(self: ComplexNumber): ComplexNumber
+	assert(TypeCheck.isComplexNumber(self), `Failed to perform \`__unm()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <a> (arg #1), got <{typeof(self)}>.`)
+	
+	self = self :: ComplexNumber
+	
+	self.real = -self.real
+	self.complex = -self.complex
+	
+	return self
+end
 
 module.__add = function(a: ComplexNumber | number, b: ComplexNumber | number): ComplexNumber
 	local isnum_A, iscomplex_A = GetNumberComponentTypes(a)
@@ -661,6 +705,8 @@ module.__pow = function(a: ComplexNumber | number, b: ComplexNumber | number): C
 end
 
 
+-- ** METAMETHOD - EQUALITY COMPARISON ** --
+
 module.__eq = function(a: ComplexNumber, b: ComplexNumber): boolean
 	assert(TypeCheck.isComplexNumber(a), `Failed to perform \`__le()\` metamethod. Expected <ComplexNumber> type for <a> (arg #1), got <{typeof(a)}>.`)
 	assert(TypeCheck.isComplexNumber(b), `Failed to perform \`__le()\` metamethod. Expected <ComplexNumber> type for <b> (arg #2), got <{typeof(b)}>.`)
@@ -689,20 +735,11 @@ module.__le = function(a: ComplexNumber, b: ComplexNumber): boolean
 end
 
 
+-- ** METAMETHOD - OTHER ** --
+
 module.__len = function(self: ComplexNumber): number
 	assert(TypeCheck.isComplexNumber(self), `Failed to perform \`__len()\` metamethod. Expected <ComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	return math.sqrt(self.real ^ 2 + self.complex ^ 2)
-end
-
-module.__unm = function(self: ComplexNumber): ComplexNumber
-	assert(TypeCheck.isComplexNumber(self), `Failed to perform \`__unm()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <a> (arg #1), got <{typeof(self)}>.`)
-	
-	self = self :: ComplexNumber
-	
-	self.real = -self.real
-	self.complex = -self.complex
-	
-	return self
 end
 
 module.__tostring = function(self: ComplexNumber): string
