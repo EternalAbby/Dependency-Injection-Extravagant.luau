@@ -10,4 +10,4 @@ This was originally made as a coding practice for string parsing.
 
 ## Pre-requisite
 
-- TypeCheck v0.2.0
+- TypeCheck v0.3.0

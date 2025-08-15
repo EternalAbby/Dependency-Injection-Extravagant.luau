@@ -10,7 +10,7 @@ This was originally made as a coding practice for typechecking, and programming 
 
 ## Pre-requisite
 
-- TypeCheck v0.2.0
+- TypeCheck v0.3.0
 
 ## External links
 

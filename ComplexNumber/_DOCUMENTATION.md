@@ -18,10 +18,7 @@ This section includes Definitions, Constructors, Functions, Methods, and Metamet
 
 ## Definitions
 
-These are type definitions that are defined and used within the module. There are **2** syntax for type definitions: `type`, and `export type`.
-
-- `type` syntax is only available within the module, it is not available to the users. Reasons may varies dependning on the type.
-- `export type` syntax is available for both the users, and the module itself. These are seen as beneficial for the users to use for typechecking when writing code.
+These are type definitions that are defined and used within the module.
 
 ### RawComplexNumber type
 
@@ -29,7 +26,7 @@ A valid `RawComplexNumber` object is defined to be a valid `RawComplexNumber` ty
 
 A valid `RawComplexNumber` type is defined to be a `table` primitive type, which includes a `real` key, and a `complex` key. Both keys **must** have a value set to a `number` primitive type, as seen in the code block below.
 
-Note: Any keys besides the ones listed will be ignored in the module.
+*Note: Any keys besides the ones listed will be ignored in the module.*
 
 ```lua
 export type RawComplexNumber = {
@@ -44,7 +41,7 @@ A valid `ComplexNumber` object is defined to be a valid `ComplexNumber` type.
 
 A valid `ComplexNumber` type is defined to be a `table` primitive type, which includes a `real` key, and a `complex` key. Both keys **must** have a value set to a `number` primitive type, as seen in the code block below. Along with that, it must also contain a `metatable` with the `__metatable` metamethod set to `"ComplexNumber"`. This `metatable` should be set from the module itself. However, it can be locally made, which may cause problems when using this module.
 
-Note: Any keys besides the ones listed will be ignored in the module. Every `ComplexNumber` objects created from this module will not include any keys other than the ones listed.
+*Note: Any keys besides the ones listed will be ignored in the module. Every `ComplexNumber` objects created from this module will not include any keys other than the ones listed.*
 
 ```lua
 export type ComplexNumber = setmetatable<{
@@ -56,6 +53,8 @@ export type ComplexNumber = setmetatable<{
 ## Constructors
 
 These are constructors that are defined within this module. These can be used by the users to create a new `ComplexNumber` object by specifying the appropriate types for the parameters.
+
+*Note: It is possible to manually create a valid `RawComplexNumber` object, and a valid `ComplexNumber` object. They will be detected as false-positives by the runtime typechecker (using `TypeCheck V0.3.0`). There are currently no plans on reinforcing this as of v1.1.0.*
 
 ### .new(real: number, complex: number): ComplexNumber
 

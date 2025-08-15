@@ -135,7 +135,7 @@ end
 -- ** RAW METHODS ** --
 
 -- RawMethod: Modify the components of <self> by performing addition to it for each operand.
-module.raw_add = function(self: RawComplexNumber?, ...: RawComplexNumber?): nil
+module.raw_add = function(self: RawComplexNumber, ...: RawComplexNumber): nil
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_add()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
@@ -153,7 +153,7 @@ module.raw_add = function(self: RawComplexNumber?, ...: RawComplexNumber?): nil
 end
 
 -- RawMethod: Modify the components of <self> by performing subtraction to it for each operand.
-module.raw_sub = function(self: RawComplexNumber?, ...: RawComplexNumber?): nil
+module.raw_sub = function(self: RawComplexNumber, ...: RawComplexNumber): nil
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_sub()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
@@ -171,7 +171,7 @@ module.raw_sub = function(self: RawComplexNumber?, ...: RawComplexNumber?): nil
 end
 
 -- RawMethod: Modify the components of <self> by performing multiplication to it for each operand.
-module.raw_mul = function(self: RawComplexNumber?, ...: RawComplexNumber?): nil
+module.raw_mul = function(self: RawComplexNumber, ...: RawComplexNumber): nil
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_mul()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
@@ -192,7 +192,7 @@ module.raw_mul = function(self: RawComplexNumber?, ...: RawComplexNumber?): nil
 end
 
 -- RawMethod: Modify the components of <self> by performing division to it for each operand.
-module.raw_div = function(self: RawComplexNumber?, ...: RawComplexNumber?): nil
+module.raw_div = function(self: RawComplexNumber, ...: RawComplexNumber): nil
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_div()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
@@ -218,7 +218,7 @@ module.raw_div = function(self: RawComplexNumber?, ...: RawComplexNumber?): nil
 end
 
 -- RawMethod: Modify the components of <self> by performing int division to it for each operand.
-module.raw_idiv = function(self: RawComplexNumber?, ...: RawComplexNumber?): nil
+module.raw_idiv = function(self: RawComplexNumber, ...: RawComplexNumber): nil
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_idiv()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
@@ -249,7 +249,7 @@ module.raw_mod = function(): nil
 end
 
 -- RawMethod: Modify the components of <self> by performing exponentiation to it for each operand.
-module.raw_pow = function(self: RawComplexNumber?, ...: RawComplexNumber?): nil
+module.raw_pow = function(self: RawComplexNumber, ...: RawComplexNumber): nil
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_pow()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
@@ -311,7 +311,7 @@ end
 
 
 -- RawMethod: Returns a boolean determining whether <self> is equivalent to every operands.
-module.raw_eq = function(self: RawComplexNumber?, ...: RawComplexNumber?): boolean
+module.raw_eq = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_eq()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
@@ -335,7 +335,7 @@ module.raw_eq = function(self: RawComplexNumber?, ...: RawComplexNumber?): boole
 end
 
 -- RawMethod: Returns a boolean determining whether <self> is less than every operands.
-module.raw_lt = function(self: RawComplexNumber?, ...: RawComplexNumber?): boolean
+module.raw_lt = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_lt()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
@@ -359,7 +359,7 @@ module.raw_lt = function(self: RawComplexNumber?, ...: RawComplexNumber?): boole
 end
 
 -- RawMethod: Returns a boolean determining whether <self> is less than or equal to every operands.
-module.raw_le = function(self: RawComplexNumber?, ...: RawComplexNumber?): boolean
+module.raw_le = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_le()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
@@ -383,7 +383,7 @@ module.raw_le = function(self: RawComplexNumber?, ...: RawComplexNumber?): boole
 end
 
 -- RawMethod: Returns a boolean determining whether <self> is greater than every operands.
-module.raw_gt = function(self: RawComplexNumber?, ...: RawComplexNumber?): boolean
+module.raw_gt = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_gt()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
@@ -407,7 +407,7 @@ module.raw_gt = function(self: RawComplexNumber?, ...: RawComplexNumber?): boole
 end
 
 -- RawMethod: Returns a boolean determining whether <self> is greater than or equal to every operands.
-module.raw_ge = function(self: RawComplexNumber?, ...: RawComplexNumber?): boolean
+module.raw_ge = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_ge()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
@@ -431,7 +431,7 @@ module.raw_ge = function(self: RawComplexNumber?, ...: RawComplexNumber?): boole
 end
 
 
-module.raw_conjugate = function(self: RawComplexNumber?): nil
+module.raw_conjugate = function(self: RawComplexNumber): nil
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_conjugate()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
@@ -442,7 +442,7 @@ module.raw_conjugate = function(self: RawComplexNumber?): nil
 end
 
 -- RawMethod: Modify the components of <self> to its additive inverse.
-module.raw_unm = function(self: RawComplexNumber?): nil
+module.raw_unm = function(self: RawComplexNumber): nil
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_unm()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
@@ -453,8 +453,11 @@ module.raw_unm = function(self: RawComplexNumber?): nil
 	return nil
 end
 
--- RawMethod: Create a formatted <string> to display <self> according to <representation>. By default, <representation> will display in "general" form.
-module.raw_tostring = function(self: RawComplexNumber?, representation: ("general" | "rectangular" | "polar")?): string
+--[[
+RawMethod: Create a <string> representation formatted to display <self>, according to <representation>.
+Optional <representation> can be either "general", "rectangular", "polar". By default, always displays in "general" form.
+]]
+module.raw_tostring = function(self: RawComplexNumber, representation: ("general" | "rectangular" | "polar")?): string
 	assert(TypeCheck.isRawComplexNumber(self), `Failed to perform \`:raw_tostring()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
