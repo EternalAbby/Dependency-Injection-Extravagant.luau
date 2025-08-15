@@ -43,48 +43,68 @@ module.FindFirstInstance = function(name: string | {string}): Instance?
 	
 	assert(isString or isArray)
 	
-	-- FIXME: Currently, the algorithm only searches through 1 "valid" path in either cases. If it fails, it will return `nil`.
-	-- The problem arises when there are multiple instances with the same name, and only *1* has the correct result. The algorithm
-	-- may miss the correct path at any given point, and falsely invalidates the solution.
-	-- Solution: Implement an approach to search through all possible paths.
 	if isString then
 		name = name :: string
 		
 		local split = name.split(".")
-		local currentRoot = game:FindService(split[1])
-		local currentChild = split[2]
-		local idx = 2
 		
-		while idx <= #split do
-			local child = currentRoot:FindFirstChild(currentChild)
-			
-			if child then
-				currentRoot = child
-				currentChild = split[idx + 1]
-				
-			elseif idx + 1 <= #split then
-				currentChild ..= split[idx + 1]
+		-- FIXME: temp recursive solution
+		local function FindInstance(root: Instance, tofind: string, idx: number): Instance?
+			if idx == #split then
+				return if root.Name == tofind then root else nil
 			end
 			
-			idx += 1
+			local children = root:GetChildren()
+			local found = nil
+			
+			for _, child in children do
+				if child.Name == tofind then
+					found = FindInstance(child, split[idx + 1], idx + 1)
+					
+					if found then
+						return found
+					end
+				end
+			end
+			
+			return FindInstance(root, tofind .. "." .. split[idx + 1], idx + 1)
 		end
 		
-		return if not currentChild then currentRoot else nil
+		local root = game:FindService(split[1])
+		return FindInstance(root, split[2], 2)
 		
 	elseif isArray then
 		name = name :: {string}
 		
-		local current = game:FindService(name[#name])
-		
-		for idx = #name - 1, 1, -1 do
-			current = current:FindFirstChild(name[idx])
-			
-			if not current then
-				return nil
+		-- FIXME: temp recursive solution
+		local function FindInstance(root: Instance, tofind: string, idx: number): Instance?
+			if idx == #name then
+				if root.Name == tofind then
+					return root
+				else
+					return nil
+				end
 			end
+			
+			local children = root:GetChildren()
+			local tofind_next = (name::{string})[idx + 1]
+			local found = nil
+			
+			for _, child in children do
+				if child.Name == tofind then
+					found = FindInstance(child, tofind_next, idx + 1)
+					
+					if found then
+						return found
+					end
+				end
+			end
+			
+			return FindInstance(root, tofind .. "." .. tofind_next, idx + 1)
 		end
 		
-		return current
+		local root = game:FindService(name[1])
+		return FindInstance(root, name[2], 2)
 	end
 	
 	return nil
@@ -97,58 +117,22 @@ module.FindFirstDescendant = function(root: Instance, target: string, depth: num
 	
 	local found = nil
 	
-	if mode == "class" then
-		-- FIXME: This is a temporary solution for a custom `:FindFirstDescendantOfClass()` implementation.
-		-- Because this is a recursive solution, it may cause stack overflow due to function calls.
-		-- Please change to an iterative solution.
-		local function FindDescendant(cur_root: Instance): Instance?
-			local classname = cur_root.ClassName
-			
-			if classname == target then
-				return cur_root
+	-- Custom implementation of `:FindFirstDescendantWithClass()`, and `:FindFirstDescendantWhichIsA()`.
+	if mode == "class" or mode == "inherit" then
+		local stack: {Instance} = root:GetChildren()
+		
+		while #stack > 0 do
+			if (mode == "class" and stack[#stack].ClassName == target)
+			or (mode == "inherit" and stack[#stack]:IsA(target)) then
+				found = stack[#stack]
+				break
 			end
 			
+			local cur_root = assert(table.remove(stack)) -- bleh
 			local children = cur_root:GetChildren()
 			
-			if #children > 0 then
-				for _, child in children do
-					local found_descendant = FindDescendant(child)
-					
-					if found_descendant then
-						return found_descendant
-					end
-				end
-			end
-			
-			return nil
+			table.move(children, 1, #children, #stack, stack)
 		end
-		
-		found = FindDescendant(root)
-		
-	elseif mode == "inherit" then
-		-- FIXME: Same as above, this is a temporary solution for a custom `:FindFirstDescendantWhichIsA()` implementation.
-		-- Please change to an iterative solution.
-		local function FindDescendant(cur_root: Instance): Instance?
-			if cur_root:IsA(target) then
-				return cur_root
-			end
-			
-			local children = cur_root:GetChildren()
-			
-			if #children > 0 then
-				for _, child in children do
-					local found_descendant = FindDescendant(child)
-					
-					if found_descendant then
-						return found_descendant
-					end
-				end
-			end
-			
-			return nil
-		end
-		
-		found = FindDescendant(root)
 		
 	else
 		found = root:FindFirstDescendant(target)
