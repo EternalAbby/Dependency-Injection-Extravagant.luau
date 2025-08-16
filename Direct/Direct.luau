@@ -46,7 +46,7 @@ module.FindFirstInstance = function(name: string | {string}): Instance?
 	if isString then
 		name = name :: string
 		
-		local split = name.split(".")
+		local split = string.split(name, ".")
 		
 		-- FIXME: temp recursive solution
 		local function FindInstance(root: Instance, tofind: string, idx: number): Instance?
@@ -117,13 +117,12 @@ module.FindFirstDescendant = function(root: Instance, target: string, depth: num
 	
 	local found = nil
 	
-	-- Custom implementation of `:FindFirstDescendantWithClass()`, and `:FindFirstDescendantWhichIsA()`.
-	if mode == "class" or mode == "inherit" then
+	-- Custom implementation of `:FindFirstDescendantOfClass()`.
+	if mode == "class" then
 		local stack: {Instance} = root:GetChildren()
 		
 		while #stack > 0 do
-			if (mode == "class" and stack[#stack].ClassName == target)
-			or (mode == "inherit" and stack[#stack]:IsA(target)) then
+			if mode == "class" and stack[#stack].ClassName == target then
 				found = stack[#stack]
 				break
 			end
@@ -134,8 +133,11 @@ module.FindFirstDescendant = function(root: Instance, target: string, depth: num
 			table.move(children, 1, #children, #stack, stack)
 		end
 		
+	elseif mode == "inherit" then
+		found = root:FindFirstChildWhichIsA(target, true)
+		
 	else
-		found = root:FindFirstDescendant(target)
+		found = root:FindFirstChild(target, true)
 	end
 	
 	if not found then
