@@ -12,7 +12,7 @@ With this *open-sourced* module, you will be quickly directed to your destinatio
 
 Thank you for using Direct module!
 
-This was originally made as a coding practice for string parsing, and data structure.
+This was originally made as a coding practice for string parsing, data structures, and algorithms.
 
 ~ Direct module made by Abby (@EternalAbby)
 

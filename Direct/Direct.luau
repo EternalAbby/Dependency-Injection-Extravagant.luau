@@ -48,7 +48,55 @@ module.FindFirstInstance = function(name: string | {string}): Instance?
 		
 		local split = string.split(name, ".")
 		
+		-- using dynamic programming to compute all enumerations of split
+		-- this may be a bottleneck if the instance is found on 1 path and all other enumerations are unused
+		-- consider caching when iterating instead
+		local dp: {{string}} = {}
+		
+		for i = 2, #split do
+			dp[i] = {}
+			dp[i][i] = split[i]
+			
+			for j = i + 1, #split do
+				dp[i][j] = dp[i][j - 1] .. split[j]
+			end
+		end
+		
+		type stackElement = {
+			["Instance"]: Instance,
+			["Start"]: number,
+			["End"]: number
+		}
+		
+		local root_children = game:FindService(split[1]):GetChildren()
+		local stack: {stackElement} = {}
+		
+		for _, child in root_children do
+			table.insert(stack, {
+				child,
+				2,
+				2
+			})
+		end
+		
+		while #stack > 0 do
+			local current = stack[#stack]
+			local current_root = current["Instance"]
+			local current_tofind = dp[current["Start"]][current["End"]]
+			
+			for _, child in current_root:GetChildren() do
+				if child.Name == current_tofind then
+					table.insert(stack, {
+						child,
+						current["End"] + 1,
+						current["End"] + 1
+					})
+				end
+			end
+		end
+		
 		-- FIXME: temp recursive solution
+		--[[
 		local function FindInstance(root: Instance, tofind: string, idx: number): Instance?
 			if idx == #split then
 				return if root.Name == tofind then root else nil
@@ -72,7 +120,7 @@ module.FindFirstInstance = function(name: string | {string}): Instance?
 		
 		local root = game:FindService(split[1])
 		return FindInstance(root, split[2], 2)
-		
+		]]
 	elseif isArray then
 		name = name :: {string}
 		
