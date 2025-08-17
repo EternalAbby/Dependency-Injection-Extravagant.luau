@@ -50,136 +50,69 @@ module.FindFirstInstance = function(name: string | {string}): Instance?
 	assert(isString or isArray)
 	
 	if isString then
-		name = name :: string
+		name = string.split(name::string, ".")
+	end
+	
+	name = name :: {string}
+	
+	if #name == 1 then
+		return game:FindService(name[1])
+	end
+	
+	local dp: {{string}} = {}
+	
+	for i = 1, #name do
+		dp[i] = {}
+		dp[i][i] = name[i]
 		
-		local split = string.split(name, ".")
-		
-		if #split == 1 then
-			return game:FindService(split[1])
+		for j = i + 1, #name do
+			dp[i][j] = dp[i][j - 1] .. "." .. name[j]
 		end
+	end
+	
+	local stack: {FFI_StackElement} = {{
+		["Instance"] = game:FindService(name[1]),
+		["Start"] = 2,
+		["End"] = 2
+	}}
+	
+	while #stack > 0 do
+		local current = stack[#stack]
+		local current_root = current["Instance"]
+		local current_tofind = dp[current["Start"]][current["End"]]
+		local current_children = current_root:GetChildren()
 		
-		local dp: {{string}} = {}
+		table.remove(stack)
 		
-		for i = 1, #split do
-			dp[i] = {}
-			dp[i][i] = split[i]
-			
-			for j = i + 1, #split do
-				dp[i][j] = dp[i][j - 1] .. "." .. split[j]
+		if #current_children == 0 or current["End"] == #name then
+			if current_root.Name == current_tofind then
+				return current_root
 			end
 		end
 		
-		local stack: {FFI_StackElement} = {{
-			["Instance"] = game:FindService(split[1]),
-			["Start"] = 2,
-			["End"] = 2
-		}}
+		local found = false
 		
-		while #stack > 0 do
-			local current = stack[#stack]
-			local current_root = current["Instance"]
-			local current_tofind = dp[current["Start"]][current["End"]]
-			local current_children = current_root:GetChildren()
-			
-			table.remove(stack)
-			
-			if #current_children == 0 or current["End"] == #split then
-				if current_root.Name == current_tofind then
-					return current_root
+		for _, child in current_children do
+			if child.Name == current_tofind then
+				if current["End"] == #name then
+					return child
 				end
-			end
-			
-			local found = false
-			
-			for _, child in current_children do
-				if child.Name == current_tofind then
-					if current["End"] == #split then
-						return child
-					end
-					
-					local data = {
-						["Instance"] = child,
-						["Start"] = current["End"] + 1,
-						["End"] = current["End"] + 1
-					}
-					
-					table.insert(stack, data)
-					found = true
-				end
-			end
-			
-			if not found and current["End"] < #split then
-				current["End"] += 1
-				table.insert(stack, current)
+				
+				local data = {
+					["Instance"] = child,
+					["Start"] = current["End"] + 1,
+					["End"] = current["End"] + 1
+				}
+				
+				table.insert(stack, data)
+				found = true
 			end
 		end
 		
-		return nil
-		
-	elseif isArray then
-		name = name :: {string}
-		
-		if #name == 1 then
-			return game:FindService(name[1])
+		if not found and current["End"] < #name then
+			current["End"] += 1
+			table.insert(stack, current)
 		end
-		
-		local dp: {{string}} = {}
-		
-		for i = 1, #name do
-			dp[i] = {}
-			dp[i][i] = name[i]
-			
-			for j = i + 1, #name do
-				dp[i][j] = dp[i][j - 1] .. "." .. name[j]
-			end
-		end
-		
-		local stack: {FFI_StackElement} = {{
-			["Instance"] = game:FindService(name[1]),
-			["Start"] = 2,
-			["End"] = 2
-		}}
-		
-		while #stack > 0 do
-			local current = stack[#stack]
-			local current_root = current["Instance"]
-			local current_tofind = dp[current["Start"]][current["End"]]
-			local current_children = current_root:GetChildren()
-			
-			table.remove(stack)
-			
-			if #current_children == 0 or current["End"] == #name then
-				if current_root.Name == current_tofind then
-					return current_root
-				end
-			end
-			
-			local found = false
-			
-			for _, child in current_children do
-				if child.Name == current_tofind then
-					if current["End"] == #name then
-						return child
-					end
-					
-					local data = {
-						["Instance"] = child,
-						["Start"] = current["End"] + 1,
-						["End"] = current["End"] + 1
-					}
-					
-					table.insert(stack, data)
-					found = true
-				end
-			end
-			
-			if not found and current["End"] < #name then
-				current["End"] += 1
-				table.insert(stack, current)
-			end
-		end
-		
-		return nil
 	end
 	
 	return nil
