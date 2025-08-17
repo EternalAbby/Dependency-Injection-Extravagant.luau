@@ -4,6 +4,12 @@ local TypeCheck = require("../TypeCheck/TypeCheck")
 
 local module = {}
 
+type FFI_StackElement = {
+	["Instance"]: Instance,
+	["Start"]: number,
+	["End"]: number
+}
+
 -- Returns the depth of <root>. A "depth" is defined to be how deep <root> is from the DataModel <game>.
 module.GetHierarchyDepth = function(root: Instance): number
 	assert(TypeCheck.isInstance(root), `Failed to compute \`.GetHierarchyDepth()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
@@ -48,111 +54,132 @@ module.FindFirstInstance = function(name: string | {string}): Instance?
 		
 		local split = string.split(name, ".")
 		
-		-- using dynamic programming to compute all enumerations of split
-		-- this may be a bottleneck if the instance is found on 1 path and all other enumerations are unused
-		-- consider caching when iterating instead
+		if #split == 1 then
+			return game:FindService(split[1])
+		end
+		
 		local dp: {{string}} = {}
 		
-		for i = 2, #split do
+		for i = 1, #split do
 			dp[i] = {}
 			dp[i][i] = split[i]
 			
 			for j = i + 1, #split do
-				dp[i][j] = dp[i][j - 1] .. split[j]
+				dp[i][j] = dp[i][j - 1] .. "." .. split[j]
 			end
 		end
 		
-		type stackElement = {
-			["Instance"]: Instance,
-			["Start"]: number,
-			["End"]: number
-		}
-		
-		local root_children = game:FindService(split[1]):GetChildren()
-		local stack: {stackElement} = {}
-		
-		for _, child in root_children do
-			table.insert(stack, {
-				child,
-				2,
-				2
-			})
-		end
+		local stack: {FFI_StackElement} = {{
+			["Instance"] = game:FindService(split[1]),
+			["Start"] = 2,
+			["End"] = 2
+		}}
 		
 		while #stack > 0 do
 			local current = stack[#stack]
 			local current_root = current["Instance"]
 			local current_tofind = dp[current["Start"]][current["End"]]
+			local current_children = current_root:GetChildren()
 			
-			for _, child in current_root:GetChildren() do
+			table.remove(stack)
+			
+			if #current_children == 0 or current["End"] == #split then
+				if current_root.Name == current_tofind then
+					return current_root
+				end
+			end
+			
+			local found = false
+			
+			for _, child in current_children do
 				if child.Name == current_tofind then
-					table.insert(stack, {
-						child,
-						current["End"] + 1,
-						current["End"] + 1
-					})
-				end
-			end
-		end
-		
-		-- FIXME: temp recursive solution
-		--[[
-		local function FindInstance(root: Instance, tofind: string, idx: number): Instance?
-			if idx == #split then
-				return if root.Name == tofind then root else nil
-			end
-			
-			local children = root:GetChildren()
-			local found = nil
-			
-			for _, child in children do
-				if child.Name == tofind then
-					found = FindInstance(child, split[idx + 1], idx + 1)
-					
-					if found then
-						return found
+					if current["End"] == #split then
+						return child
 					end
+					
+					local data = {
+						["Instance"] = child,
+						["Start"] = current["End"] + 1,
+						["End"] = current["End"] + 1
+					}
+					
+					table.insert(stack, data)
+					found = true
 				end
 			end
 			
-			return FindInstance(root, tofind .. "." .. split[idx + 1], idx + 1)
+			if not found and current["End"] < #split then
+				current["End"] += 1
+				table.insert(stack, current)
+			end
 		end
 		
-		local root = game:FindService(split[1])
-		return FindInstance(root, split[2], 2)
-		]]
+		return nil
+		
 	elseif isArray then
 		name = name :: {string}
 		
-		-- FIXME: temp recursive solution
-		local function FindInstance(root: Instance, tofind: string, idx: number): Instance?
-			if idx == #name then
-				if root.Name == tofind then
-					return root
-				else
-					return nil
-				end
-			end
-			
-			local children = root:GetChildren()
-			local tofind_next = (name::{string})[idx + 1]
-			local found = nil
-			
-			for _, child in children do
-				if child.Name == tofind then
-					found = FindInstance(child, tofind_next, idx + 1)
-					
-					if found then
-						return found
-					end
-				end
-			end
-			
-			return FindInstance(root, tofind .. "." .. tofind_next, idx + 1)
+		if #name == 1 then
+			return game:FindService(name[1])
 		end
 		
-		local root = game:FindService(name[1])
-		return FindInstance(root, name[2], 2)
+		local dp: {{string}} = {}
+		
+		for i = 1, #name do
+			dp[i] = {}
+			dp[i][i] = name[i]
+			
+			for j = i + 1, #name do
+				dp[i][j] = dp[i][j - 1] .. "." .. name[j]
+			end
+		end
+		
+		local stack: {FFI_StackElement} = {{
+			["Instance"] = game:FindService(name[1]),
+			["Start"] = 2,
+			["End"] = 2
+		}}
+		
+		while #stack > 0 do
+			local current = stack[#stack]
+			local current_root = current["Instance"]
+			local current_tofind = dp[current["Start"]][current["End"]]
+			local current_children = current_root:GetChildren()
+			
+			table.remove(stack)
+			
+			if #current_children == 0 or current["End"] == #name then
+				if current_root.Name == current_tofind then
+					return current_root
+				end
+			end
+			
+			local found = false
+			
+			for _, child in current_children do
+				if child.Name == current_tofind then
+					if current["End"] == #name then
+						return child
+					end
+					
+					local data = {
+						["Instance"] = child,
+						["Start"] = current["End"] + 1,
+						["End"] = current["End"] + 1
+					}
+					
+					table.insert(stack, data)
+					found = true
+				end
+			end
+			
+			if not found and current["End"] < #name then
+				current["End"] += 1
+				table.insert(stack, current)
+			end
+		end
+		
+		return nil
 	end
 	
 	return nil
