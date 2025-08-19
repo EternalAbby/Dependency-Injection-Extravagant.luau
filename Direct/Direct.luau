@@ -36,6 +36,27 @@ end
 Function: Gets the full directory path of <root>, except it is returned as an array. This is not cached.
 In Luau, arrays are 1-indexed, so the first element of the returned array, <root>, is at index 1.
 Every subsequent ancestor is at the next index. Stops at the service provider, before the Datamodel "game".
+Returns the string array.
+]]
+module.GetFullNameAsStringArray = function(root: Instance): {string}
+	assert(TypeCheck.isInstance(root), `Failed to compute \`.GetFullNameAsStringArray()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+	
+	root = root :: Instance
+	
+	local res: {string} = {}
+	
+	while root.Parent do
+		table.insert(res, root.Name)
+		root = root.Parent
+	end
+	
+	return res
+end
+
+--[[
+Function: Gets the full directory path of <root>, except it is returned as an Instance array. This is not cached.
+In Luau, arrays are 1-indexed, so the first element of the returned array, <root>, is at index 1.
+Every subsequent ancestor is at the next index. Stops at the service provider, before the Datamodel "game".
 Returns the instances array.
 ]]
 module.GetFullNameAsInstancesArray = function(root: Instance): {Instance}
