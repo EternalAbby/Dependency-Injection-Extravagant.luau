@@ -4,17 +4,27 @@ This file is made as a temporary solution for a Documentation for this module. A
 
 ## Note
 
-Short summary: Only use this module only when necessary (it's slow). Always cache the value if the case is the same (it isn't done internally).
+Short summary: Only use this module only when necessary (it's slow). Always cache the value if the input cases are the same (it isn't done internally).
 
 Through extensive testing within an environment that is similar to a general use case for a `Roblox Studio` game project (this module's target game engine), every function within this module performs slower than its built-in counterparts. As such, it is recommended that this module should not be used, unless its features are needed for your use case. Therefore, this module cannot replace those built-in functions.
 
-For details about the performance testing, it is tested at a sample size of `1`, `10^3`, `10^4 * 3`, and `10^6` iterations with varying test cases, ranging from trivial to deep searches. Results vary through each case, but in general, this module is at least **3 times slower** than built-ins, sometimes even worse. Therefore, it is recommended to cache the result of every function call if the case stays the same. The module does not internally cache these result by itself.
+For details about the performance benchmark, it is tested at a sample size of `1`, `10^3`, `10^4 * 3`, and `10^6` iterations with varying test cases, ranging from trivial to deep searches. Results vary through each case, but in general, this module is at least **3 times slower** than built-ins, sometimes even worse. Therefore, it is recommended to cache the result of every function call if the case stays the same. The module does not internally cache these result by itself.
 
-To reduce the amount of performance loss when using this module similar to its built-in counterparts, this module will call the built-in instead whenever possible, or terminates early to return the desired result.
+To reduce the amount of performance loss when using this module similar to its built-in counterparts, this module will prioritize calling the built-in function instead whenever possible, or terminates early to return the desired result. Efforts are done to ensure that the performance of this module is optimized for time and space.
+
+## Documentation
+
+This section includes Definitions and Functions in that order.
 
 ## Definitions
 
-These are type definitions within this module.
+These are definitions within this module.
+
+### Depth
+
+A "depth" is defined as a step (`root = root.Parent`) from the `root` towards the DataModel `game`. The total "depth" is the total step needed from the `root` to reach the DataModel `game`. If "depth" is 0, it is the `root`.
+
+A "depth" *offset* is defined as the offset away from `target`. If positive, this offset goes towards the DataModel `game`. If negative and `root` has higher "depth" than `target`, this offset goes towards the `root` (Otherwise, it is impossible to compute). If "depth" is 0, it is the `target`.
 
 ### FFI_Element type
 
@@ -36,11 +46,7 @@ These are functions within this module.
 
 Compute the `depth` of `root`.
 
-A "depth" is defined to be a layer into an Instance.
-
-The total "depth" of an instance is how deep `root` is from the Datamodel `game`.
-
-Returns the "depth".
+Returns the `depth`.
 
 ### .GetFullNameAsStringArray(root: Instance): {string}
 
@@ -50,7 +56,7 @@ In Luau, arrays are 1-indexed, so the starting element is at index 1. `root` is 
 
 Every subsequent ancestor is appended into the array. This process stops at the service provider ancestor of `root`, meaning before it appends the Datamodel `game`.
 
-Returns the resulting array.
+Returns the computed array.
 
 ### .GetFullNameAsInstancesArray(root: Instance): {Instance}
 
@@ -60,7 +66,7 @@ In Luau, arrays are 1-indexed, so the starting element is at index 1. `root` is 
 
 Every subsequent ancestor is appended into the array. This process stops at the service provider ancestor of `root`, meaning before it appends the Datamodel `game`.
 
-Returns the resulting array.
+Returns the computed array.
 
 ### .FindFirstInstance(name: string | {string}): Instance?
 
@@ -68,9 +74,9 @@ Attempts to find the first `Instance` that satisfies `name`.
 
 `name` can either be a string, the result from the built-in function `Instance:GetFullName()`, or it can be a string array, the result from the `.GetFullNameAsStringArray()` function.
 
-Returns the resulting instance. If failed, returns `nil`.
+Returns the instance found. If failed, returns `nil`.
 
-*Note: As of v1.0.0, there are internally 2 implementations of this function: recursive, and iterative. Currently, the iterative solution is used in the module's source code. This is to prevent possible stack overflow on the function call stack, and memory usage in the worst-case scenario, where searches are very deep, and it reaches the allowed memory usage. However, through testing on **high sample sizes**, and deep searches (5 layers), the iterative solution is much slower than the recursive solution, due to overhead when doing searches. This isn't the case for singular iterations, so it is odd. It should be noted that iterative solutions are theoretically faster than recursive solutions. Actively finding a possible optimization to the iterative solution.*
+*Note: As of v1.0.0, there are internally 2 implementations of this function: recursive, and iterative. Currently, the iterative solution is used in the module's source code. This is to prevent excessive memory usages when using this function on deep searches. However, through testing on **high sample sizes**, and deep searches (5 layers), the iterative solution is much slower than the recursive solution, due to overhead when doing searches. This isn't the case for singular iterations, so it is quite odd when testing. It should be noted that iterative solutions are theoretically faster than recursive solutions. Actively finding a possible optimization to the iterative solution.*
 
 ### .FindFirstDescendant(root: Instance, target: string, depth: number?, mode: ("default" | "class" | "inherit")?): Instance?
 
@@ -87,7 +93,7 @@ Optionally, the `mode` parameter changes the behavior of the function. The follo
 
 By default, `mode` is set to use the `"default"` behavior.
 
-Returns the resulting instance.
+Returns the instance found. If failed, returns `nil`.
 
 ### .FindFirstAncestor(root: Instance, target: string, depth: number?, mode: ("default" | "class" | "inherit")?): Instance?
 
@@ -104,7 +110,7 @@ Optionally, the `mode` parameter changes the behavior of the function. The follo
 
 By default, `mode` is set to use the `"default"` behavior.
 
-Returns the resulting instance.
+Returns the instance found. If failed, returns `nil`.
 
 ### .IsAncestorOf(root: Instance, target: Instance, depth: number?): (boolean, Instance?)
 
@@ -112,7 +118,7 @@ Determines whether `root` is the ancestor of `target`.
 
 Optionally, the `depth` parameter offsets the hierarchy of the instance to return. By default, this functionality is not used until specified with a non-zero integer. If a different number type is provided, returns `nil`.
 
-Returns the resulting instance.
+Returns the boolean. If provided with `depth`, returns the found instance. If failed, returns `nil`.
 
 ### .IsDescendant(root: Instance, target: Instance, depth: number?): (boolean, Instance?)
 
@@ -120,4 +126,4 @@ Determines whether `root` is the descendant of `target`.
 
 Optionally, the `depth` parameter offsets the hierarchy of the instance to return. By default, this functionality is not used until specified with a positive integer. If a different number type is provided, returns `nil`.
 
-Returns the resulting instance.
+Returns the boolean. If provided with `depth`, returns the found instance. If failed, returns `nil`.

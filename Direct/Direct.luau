@@ -210,12 +210,14 @@ module.FindFirstDescendant = function(root: Instance, target: string, depth: num
 		return nil
 	end
 	
-	if depth and depth ~= 0 then
-		local target_directory = module.GetFullNameAsInstancesArray(found)
-		local target_depth = #target_directory
-		local idx = target_depth + depth + 1
-		
-		return target_directory[idx]
+	depth = depth :: number
+	
+	if TypeCheck.isNumber(depth, false) then
+		if depth > 0 then
+			for _ = 1, depth do
+				found = found.Parent
+			end
+		end
 	end
 	
 	return found
@@ -248,12 +250,35 @@ module.FindFirstAncestor = function(root: Instance, target: string, depth: numbe
 		return nil
 	end
 	
-	if depth and depth ~= 0 then
-		local root_directory = module.GetFullNameAsInstancesArray(root)
-		local target_depth = module.GetHierarchyDepth(found)
-		local idx = target_depth + depth + 1
-		
-		return root_directory[idx]
+	depth = depth :: number
+	
+	if TypeCheck.isNumber(depth, false) then
+		if depth > 0 then
+			for _ = 1, depth do
+				found = found.Parent
+			end
+			
+		elseif depth < 0 then
+			-- Explanation: Find `iter` in the equation `target_depth - depth = root_depth - iter`.
+			local offset = 0
+			local temp = root
+			while temp ~= found do
+				temp = temp.Parent
+				offset += 1
+			end
+			
+			local iter = offset + depth
+			
+			if iter < 0 then
+				return found
+			end
+			
+			for _ = 1, iter do
+				root = root.Parent :: Instance
+			end
+			return root
+			
+		end
 	end
 	
 	return found
@@ -273,14 +298,15 @@ module.IsAncestorOf = function(root: Instance, target: Instance, depth: number?)
 	if root:IsAncestorOf(target) then
 		if depth and TypeCheck.isNumber(depth, false) then
 			if depth == 0 then
-				return true, root
+				return true, target
+				
+			elseif depth > 0 then
+				for _ = 1, depth do
+					target = target.Parent :: Instance
+				end
+				
+				return true, target
 			end
-			
-			local target_directory = module.GetFullNameAsInstancesArray(target)
-			local target_depth = #target_directory
-			local idx = target_depth + depth + 1
-			
-			return true, target_directory[idx]
 		end
 		
 		return true, nil
@@ -303,14 +329,34 @@ module.IsDescendantOf = function(root: Instance, target: Instance, depth: number
 	if root:IsDescendantOf(target) then
 		if depth and TypeCheck.isNumber(depth, false) then
 			if depth == 0 then
+				return true, target
+				
+			elseif depth > 0 then
+				for _ = 1, depth do
+					target = target.Parent :: Instance
+				end
+				return true, target
+				
+			elseif depth < 0 then
+				-- Explanation: Find `iter` in the equation `target_depth - depth = root_depth - iter`.
+				local offset = 0
+				local temp = root
+				while temp ~= target do
+					temp = temp.Parent
+					offset += 1
+				end
+				
+				local iter = offset + depth
+				
+				if iter < 0 then
+					return true, nil
+				end
+				
+				for _ = 1, iter do
+					root = root.Parent :: Instance
+				end
 				return true, root
 			end
-			
-			local root_directory = module.GetFullNameAsInstancesArray(root)
-			local target_depth = module.GetHierarchyDepth(target)
-			local idx = target_depth + depth + 1
-			
-			return true, root_directory[idx]
 		end
 		
 		return true, nil
