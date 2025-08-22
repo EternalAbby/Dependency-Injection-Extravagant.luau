@@ -106,64 +106,57 @@ module.FindFirstInstance = function(name: string | {string}): Instance?
 	end
 	
 	local dp: {{string}} = {}
-	dp[1] = {name[1]}
 	
-	local stack: {FFI_StackElement} = {{
-		["Instance"] = game:FindService(name[1]),
-		["Start"] = 2,
-		["End"] = 2
-	}}
+	-- Every 1st index, it is the Instance to search through.
+	-- Every 2nd index, it is the starting dp string index to match.
+	-- Every 3rd index, it is the ending dp string index to match.
+	local stack: {Instance | number} = {
+		game:FindService(name[1]),
+		2,
+		2
+	}
 	
 	while #stack > 0 do
-		local current = stack[#stack]
+		local current_root = stack[#stack - 2] :: Instance
+		local left_str_idx = stack[#stack - 1] :: number
+		local right_str_idx = stack[#stack] :: number
+		
+		-- remove from stack
+		table.remove(stack)
+		table.remove(stack)
 		table.remove(stack)
 		
-		local current_root = current["Instance"]
-		local current_children = current_root:GetChildren()
-		local current_start = current["Start"]
-		local current_end = current["End"]
-		
-		local current_tofind = nil
-		if not dp[current_start] then
-			dp[current_start] = {}
-			dp[current_start][current_start] = name[current_start]
+		if not dp[left_str_idx] then
+			dp[left_str_idx] = {}
+			dp[left_str_idx][left_str_idx] = name[left_str_idx]
 		end
 		
-		if not dp[current_start][current_end] then
-			dp[current_start][current_end] = dp[current_start][current_end - 1] .. "." .. name[current_end]
-		end
-		current_tofind = dp[current_start][current_end]		
-		
-		if #current_children == 0 or current["End"] == #name then
-			if current_root.Name == current_tofind then
-				return current_root
-			end
+		if not dp[left_str_idx][right_str_idx] then
+			dp[left_str_idx][right_str_idx] = dp[left_str_idx][right_str_idx - 1] .. "." .. name[right_str_idx]
 		end
 		
+		local current_tofind = dp[left_str_idx][right_str_idx]
 		local found = false
 		
 		-- FIXME: This loop may be the bottleneck of the iterative solution
 		-- for slower performance than the recursive solution.
-		for _, child in current_children do
+		for _, child in current_root:GetChildren() do
 			if child.Name == current_tofind then
-				if current["End"] == #name then
+				if right_str_idx == #name then
 					return child
 				end
 				
-				local data = {
-					["Instance"] = child,
-					["Start"] = current["End"] + 1,
-					["End"] = current["End"] + 1
-				}
-				
-				table.insert(stack, data)
+				table.insert(stack, child)
+				table.insert(stack, right_str_idx + 1)
+				table.insert(stack, right_str_idx + 1)
 				found = true
 			end
 		end
 		
-		if not found and current["End"] < #name then
-			current["End"] += 1
-			table.insert(stack, current)
+		if not found and right_str_idx < #name then
+			table.insert(stack, current_root)
+			table.insert(stack, left_str_idx)
+			table.insert(stack, right_str_idx + 1)
 		end
 	end
 	
@@ -193,9 +186,10 @@ module.FindFirstDescendant = function(root: Instance, target: string, depth: num
 				break
 			end
 			
-			local cur_root = assert(table.remove(stack)) -- bleh
+			local cur_root = stack[#stack]
 			local children = cur_root:GetChildren()
 			
+			table.remove(stack)
 			table.move(children, 1, #children, #stack, stack)
 		end
 		
