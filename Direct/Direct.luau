@@ -4,13 +4,6 @@ local TypeCheck = require("../TypeCheck/TypeCheck")
 
 local module = {}
 
--- This type is used for the `.FindFirstInstance()` function.
-type FFI_StackElement = {
-	["Instance"]: Instance,
-	["Start"]: number,
-	["End"]: number
-}
-
 --[[
 Function: Gets the "depth" of <root>. This is not cached.
 A "depth" is defined to be a layer into an Instance.
@@ -181,7 +174,7 @@ module.FindFirstDescendant = function(root: Instance, target: string, depth: num
 		local stack: {Instance} = root:GetChildren()
 		
 		while #stack > 0 do
-			if mode == "class" and stack[#stack].ClassName == target then
+			if stack[#stack].ClassName == target then
 				found = stack[#stack]
 				break
 			end
@@ -332,7 +325,7 @@ module.IsDescendantOf = function(root: Instance, target: Instance, depth: number
 				return true, target
 				
 			elseif depth < 0 then
-				-- Explanation: Find `iter` in the equation `target_depth - depth = root_depth - iter`.
+				-- Explanation: Find `iter` from the equation `target_depth - depth = root_depth - iter`.
 				local offset = 0
 				local temp = root
 				while temp ~= target do

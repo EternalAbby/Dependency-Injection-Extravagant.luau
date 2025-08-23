@@ -4,11 +4,13 @@
 
 `Direct` is a module, made specifically for `Roblox Studio`. It extends the functionalities of some specific methods in the `Instance` class to allow more control over how you can traverse through the hierarchy of the objects in the `Explorer`.
 
-In Luau, many objects inherit the `Instance` class. These objects have inherit methods, which when used, will traverse through the hierarchy of the objects, only stopping after satisfying a specific requirement. In other words, methods called `:FindFirst.*()`, and `:Is.*()` (`.*` is regex wildcard expression). They are very useful when validation is needed for the instance. However, they are particularly limited in how much control you have over their returned values, sometimes you might want to search through more into the depth of the objects to find what's beyond the target.
+In the `Roblox Studio` game engine, many objects inherit the `Instance` class. That means, these objects inherit methods that allows the user to traverse through the hierarchy of the objects, only stopping after satisfying a specific requirement, then terminates. In other words, methods that are called `:FindFirst.*()`, and `:Is.*()` (`.*` is the regex wildcard expression).
 
-With this motivation, this *open-sourced* module was created. Using this module, all of your worries about this niche use case has been resolved! Quickly direct to your target destination without any further implementation needed!
+Although they are very useful for validation of the instance, they are quite limited in how much control you have over their returned values. There may be times when you might want to search through beyond the depth of the target.
 
-*Note: Please read the `Note` section in `_DOCUMENTATION` for more details on the performance of this module.*
+From that motivation, this *open-sourced* module was created. With this module, you are able to perform this niche use case without any trouble! All of your worries have been resolved, all thanks to this module. Easily direct to your target destination without any further implementation needed!
+
+*Note: Please read the `Note` section in the `_DOCUMENTATION` file for more details on the performance of this module.*
 
 ## Author's note
 
@@ -18,6 +20,6 @@ This was originally made as a coding practice for string parsing, data structure
 
 ~ Direct module made by Abby (@EternalAbby)
 
-## Pre-requisite
+## Prerequisite
 
 - TypeCheck v0.3.0

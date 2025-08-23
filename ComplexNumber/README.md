@@ -18,7 +18,7 @@ Although, it should be noted that Luau, and similarly Lua, only allows prototype
 
 ~ ComplexNumber module made by Abby (@EternalAbby)
 
-## Pre-requisite
+## Prerequisite
 
 - TypeCheck v0.3.0
 

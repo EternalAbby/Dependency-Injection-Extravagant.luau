@@ -18,7 +18,7 @@ These are type definitions from DIE modules, which are supported by this module.
 
 ### RawComplexNumber type
 
-This type is from the ComplexNumber module.
+This type is from the `ComplexNumber` module. If you would like to use this type, please refer to the `export type` version in the `ComplexNumber` module.
 
 ```lua
 type RawComplexNumber = {
@@ -26,6 +26,10 @@ type RawComplexNumber = {
 	["complex"]: number
 }
 ```
+
+### ComplexNumber type
+
+This type is from the `ComplexNumber` module. If you would like to use this type, please refer to the `export type` version in the `ComplexNumber` module.
 
 ```lua
 type ComplexNumber = setmetatable<{

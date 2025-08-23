@@ -22,67 +22,72 @@ These are definitions within this module.
 
 ### Depth
 
-A "depth" is defined as a step (`root = root.Parent`) from the `root` towards the DataModel `game`. The total "depth" is the total step needed from the `root` to reach the DataModel `game`. If "depth" is 0, it is the `root`.
+This module uses the term "depth" to refer to **2** different definitions.
 
-A "depth" *offset* is defined as the offset away from `target`. If positive, this offset goes towards the DataModel `game`. If negative and `root` has higher "depth" than `target`, this offset goes towards the `root` (Otherwise, it is impossible to compute). If "depth" is 0, it is the `target`.
+1. A "depth", as in the descending hierarchy of the instance within the `Explorer`, is defined as an integer, corresponding to every steps (via performing recursively the operation `root = root.Parent`) from the `root` towards the DataModel `game`.
 
-### FFI_Element type
+	- The total "depth" is the total step needed from the `root` to reach the DataModel `game`.
+	- If "depth" is 0, the `root` is the DataModel `game` itself.
+	- This can be obtained from the `.GetHierarchyDepth()` function.
+	- Example: `game.Workspace.Part` has a "depth" of 2.
 
-This type is used in the `.FindFirstInstance()` function in the module. This is not meant to be used by the user.
+2. A "depth", as in the offset parameter for functions, is defined as an integer offset from the `target`. This definition is used for input parameters for functions.
 
-```lua
-type FFI_StackElement = {
-	["Instance"]: Instance,
-	["Start"]: number,
-	["End"]: number
-}
-```
+	- If "depth" is positive, this offset goes towards the DataModel `game`.
+	- If "depth" is negative and `root` has larger "depth" (def. 1) than `target`, this offset goes towards the `root`. This is impossible to compute if the second requirement is not true.
+	- If "depth" is 0, it is the `target` itself.
+	- If "depth" is provided as a non-integer, it is truncated into its integer representation.
+	- Example: From the root `game.Workspace.Part.Trail` and the target `game.Workspace.Part`: `depth = 1` returns `game.Workspace`, `depth = -1` returns `game.Workspace.Part.Trail`.
 
 ## Functions
 
-These are functions within this module.
+These are functions within this module. They can provide quality of life functionalities to the users when traversing through the hierarchy of instances in the `Explorer`.
+
+It is important to note that the performance of these functions are not replaceable with their built-in counterparts. Therefore, only use these functions when it is needed, and manually cache the result whenever possible. Refer to the `Note` section above for more details.
 
 ### .GetHierarchyDepth(root: Instance): number
 
-Compute the `depth` of `root`.
+Compute the `depth` (def. 1) of `root`.
 
 Returns the `depth`.
 
 ### .GetFullNameAsStringArray(root: Instance): {string}
 
-Compute the full directory path to `root`. Unlike the built-in `Instance:GetFullName()`, this is returned as a string array.
+Compute the full directory path of `root`.
 
-In Luau, arrays are 1-indexed, so the starting element is at index 1. `root` is the starting element.
+Unlike the built-in `Instance:GetFullName()`, this function returns an array of strings instead. Allows more flexibility with the ancestors of `root`.
 
-Every subsequent ancestor is appended into the array. This process stops at the service provider ancestor of `root`, meaning before it appends the Datamodel `game`.
+In Luau, arrays are 1-indexed, so the starting element is at index 1. `root` is the starting element. Every subsequent ancestor is *appended* into the array. This process stops at the service provider ancestor of `root`, meaning before it appends the Datamodel `game` into the array.
 
 Returns the computed array.
 
 ### .GetFullNameAsInstancesArray(root: Instance): {Instance}
 
-Compute the full directory path to `root`. Unlike the built-in `Instance:GetFullName()`, this is returned as an Instance array.
+Compute the full directory path to `root`.
 
-In Luau, arrays are 1-indexed, so the starting element is at index 1. `root` is the starting element.
+Unlike the built-in `Instance:GetFullName()`, this function returns an array of instances instead. Allows more flexibility with the ancestors of `root`.
 
-Every subsequent ancestor is appended into the array. This process stops at the service provider ancestor of `root`, meaning before it appends the Datamodel `game`.
+In Luau, arrays are 1-indexed, so the starting element is at index 1. `root` is the starting element. Every subsequent ancestor is *appended* into the array. This process stops at the service provider ancestor of `root`, meaning before it appends the Datamodel `game` in the array.
 
 Returns the computed array.
 
 ### .FindFirstInstance(name: string | {string}): Instance?
 
-Attempts to find the first `Instance` that satisfies `name`.
+Attempts to find the first `Instance` object that satisfies the `name` parameter.
 
-`name` can either be a string, the result from the built-in function `Instance:GetFullName()`, or it can be a string array, the result from the `.GetFullNameAsStringArray()` function.
+`name` can either be in the format from the built-in `Instance:GetFullName()`, or in the format from the module's `.GetFullNameAsStringArray()` function.
 
-Returns the instance found. If failed, returns `nil`.
+Returns the `Instance` if found. Otherwise, returns `nil`.
 
 *Note: As of v1.0.0, there are internally 2 implementations of this function: recursive, and iterative. Currently, the iterative solution is used in the module's source code. This is to prevent excessive memory usages when using this function on deep searches. However, through testing on **high sample sizes**, and deep searches (5 layers), the iterative solution is much slower than the recursive solution, due to overhead when doing searches. This isn't the case for singular iterations, so it is quite odd when testing. It should be noted that iterative solutions are theoretically faster than recursive solutions. Actively finding a possible optimization to the iterative solution.*
 
 ### .FindFirstDescendant(root: Instance, target: string, depth: number?, mode: ("default" | "class" | "inherit")?): Instance?
 
-Attempts to find the first descendant in `root` that satisfies `target`. Similar to its built-in counterpart, `root:FindFirstChild(target, true)` (or the deprecated `root:FindFirstDescendant(target)`).
+Attempts to find the first `Instance` descendant in `root` that satisfies the `target` parameter.
 
-Optionally, the `depth` parameter offsets the hierarchy of the instance to return. By default, this functionality is not used until specified with a positive integer. If a different number type is provided, returns `nil`.
+This function is similar to its built-in counterpart, `root:FindFirstChild(target, true)` (or the deprecated `root:FindFirstDescendant(target)`).
+
+Optionally, the `depth` parameter (def. 2) can be provided into this function. By default, this functionality is not used until specified with a positive integer.
 
 Optionally, the `mode` parameter changes the behavior of the function. The following table shows the behavior used:
 
@@ -93,37 +98,43 @@ Optionally, the `mode` parameter changes the behavior of the function. The follo
 
 By default, `mode` is set to use the `"default"` behavior.
 
-Returns the instance found. If failed, returns `nil`.
+Returns the `Instance` if found. Otherwise, returns `nil`.
 
 ### .FindFirstAncestor(root: Instance, target: string, depth: number?, mode: ("default" | "class" | "inherit")?): Instance?
 
-Attempts to find the first ancestor in `root` that satisfies `target`. Similar to its built-in counterpart, `Instance:FindFirstAncestor()`.
+Attempts to find the first `Instance` ancestor from `root` that satisfies the `target` parameter.
 
-Optionally, the `depth` parameter offsets the hierarchy of the instance to return. By default, this functionality is not used until specified with a non-zero integer. If a different number type is provided, returns `nil`.
+This function is similar to its built-in counterpart, `root:FindFirstAncestor(target)`.
+
+Optionally, the `depth` parameter (def. 2) can be provided into this function. By default, this functionality is not used until specified with a non-zero integer.
 
 Optionally, the `mode` parameter changes the behavior of the function. The following table shows the behavior used:
 
 | mode             | "default"                              | "class"                                       | "inherit"                                      |
 |------------------|----------------------------------------|-----------------------------------------------|------------------------------------------------|
-| Function         | `root:FindFirstAncestor(target, true)` | `root:FindFirstAncestorOfClass(target, true)` | `root:FindFirstAncestorWhichIsA(target, true)` |
+| Function         | `root:FindFirstAncestor(target)`       | `root:FindFirstAncestorOfClass(target)`       | `root:FindFirstAncestorWhichIsA(target)`       |
 | Built-in/Custom? | Built-in                               | Built-in                                      | Custom                                         |
 
 By default, `mode` is set to use the `"default"` behavior.
 
-Returns the instance found. If failed, returns `nil`.
+Returns the `Instance` if found. Otherwise, returns `nil`.
 
 ### .IsAncestorOf(root: Instance, target: Instance, depth: number?): (boolean, Instance?)
 
-Determines whether `root` is the ancestor of `target`.
+Determines whether the `root` instance is the ancestor of the `target` instance.
 
-Optionally, the `depth` parameter offsets the hierarchy of the instance to return. By default, this functionality is not used until specified with a non-zero integer. If a different number type is provided, returns `nil`.
+This function is similar to its built-in counterpart, `root:IsAncestorOf(target)`.
 
-Returns the boolean. If provided with `depth`, returns the found instance. If failed, returns `nil`.
+Optionally, the `depth` parameter (def. 2) can be provided into this function. By default, this functionality is not used until specified with a non-negative integer. If a negative number is provided, returns `nil`.
 
-### .IsDescendant(root: Instance, target: Instance, depth: number?): (boolean, Instance?)
+Returns a boolean as the result of the function. If provided with `depth`, returns the `Instance` found. If failed, returns `nil`.
 
-Determines whether `root` is the descendant of `target`.
+### .IsDescendanOf(root: Instance, target: Instance, depth: number?): (boolean, Instance?)
 
-Optionally, the `depth` parameter offsets the hierarchy of the instance to return. By default, this functionality is not used until specified with a positive integer. If a different number type is provided, returns `nil`.
+Determines whether the `root` instance is the descendant of the `target` instance.
 
-Returns the boolean. If provided with `depth`, returns the found instance. If failed, returns `nil`.
+This function is similar to its built-in counterpart, `root:IsDescendantOf(target)`.
+
+Optionally, the `depth` parameter (def. 2) can be provided into this function. By default, this functionality is not used until specified with an integer.
+
+Returns a boolean as the result of the function. If provided with `depth`, returns the `Instance` found. If failed, returns `nil`.

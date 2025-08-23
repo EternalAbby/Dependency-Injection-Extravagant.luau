@@ -1,5 +1,6 @@
 --!strict
 
+-- Placeholder module.
 local module = {}
 
 -- Generate the nth fibonacci number.
