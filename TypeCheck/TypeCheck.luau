@@ -14,6 +14,12 @@ type ComplexNumber = setmetatable<{
 	["complex"]: number
 }, {__metatable: "ComplexNumber"}>
 
+-- This type is taken from the Matrix module.
+type Matrix = {}
+
+-- This type is taken from the Matrix module.
+type DynamicMatrix = {}
+
 module.isString = function(candidate: string): boolean
 	if typeof(candidate) ~= "string" then
 		return false
@@ -72,6 +78,24 @@ module.isComplexNumber = function(candidate: ComplexNumber): boolean
 	end
 	
 	return true
+end
+
+-- This function is used in the Matrix module.
+module.isMatrix = function(candidate: Matrix): boolean
+	-- TBA
+	return false
+end
+
+-- This function is used in the Matrix module.
+module.isSquaredMatrix = function(candidate: Matrix): boolean
+	-- TBA
+	return false
+end
+
+-- This function is used in the Matrix module.
+module.isDynamicMatrix = function(candidate: DynamicMatrix): boolean
+	-- TBA
+	return false
 end
 
 module.isBoolean = function(candidate: boolean | nil, exclude_nil: boolean?): boolean

@@ -1,16 +1,19 @@
-# Placeholder module
+# Matrix module
 
 ## What is this module?
 
-This is a template for any future module. This will be repurposed soon.
+This is the Matrix module.
+
+TBA
 
 ## Author's note
 
-Placeholder text.
+Thank you for using the Matrix module.
 
-~ Placeholder module.
+TBA
+
+~ Matrix module made by Abby (@EternalAbby).
 
 ## Prerequisite
 
-- Item 1
-- Item 2
+- TypeCheck v0.4.0
