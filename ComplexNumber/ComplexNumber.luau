@@ -139,8 +139,6 @@ end
 
 
 -- ** RAW METHODS ** --
-
-
 -- ** RAW METHODS - BASIC ARITHMETIC OPERATION ** --
 
 -- RawMethod: Modify the components of <self> to its additive inverse.
@@ -518,9 +516,7 @@ module.raw_tostring = function(self: RawComplexNumber, representation: ("general
 end
 
 -- ** METAMETHODS ** --
-
-
--- ** METAMETHOD - INITIAL ** --
+-- ** METAMETHODS - INITIAL ** --
 
 module.__index = module
 
@@ -531,7 +527,7 @@ end
 module.__metatable = "ComplexNumber"
 
 
--- ** METAMETHOD - BASIC ARITHMETIC OPERATION ** --
+-- ** METAMETHODS - BASIC ARITHMETIC OPERATION ** --
 
 module.__unm = function(self: ComplexNumber): ComplexNumber
 	assert(TypeCheck.isComplexNumber(self), `Failed to perform \`__unm()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <a> (arg #1), got <{typeof(self)}>.`)
@@ -712,7 +708,7 @@ module.__pow = function(a: ComplexNumber | number, b: ComplexNumber | number): C
 end
 
 
--- ** METAMETHOD - EQUALITY COMPARISON ** --
+-- ** METAMETHODS - EQUALITY COMPARISON ** --
 
 module.__eq = function(a: ComplexNumber, b: ComplexNumber): boolean
 	assert(TypeCheck.isComplexNumber(a), `Failed to perform \`__le()\` metamethod. Expected <ComplexNumber> type for <a> (arg #1), got <{typeof(a)}>.`)
@@ -742,7 +738,7 @@ module.__le = function(a: ComplexNumber, b: ComplexNumber): boolean
 end
 
 
--- ** METAMETHOD - OTHER ** --
+-- ** METAMETHODS - OTHER ** --
 
 module.__len = function(self: ComplexNumber): number
 	assert(TypeCheck.isComplexNumber(self), `Failed to perform \`__len()\` metamethod. Expected <ComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
