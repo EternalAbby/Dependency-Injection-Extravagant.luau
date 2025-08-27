@@ -25,6 +25,14 @@ export type DynamicMatrix = {
 	DynamicMatrix | number
 }
 
+
+-- ** INTERNAL FUNCTIONS ** --
+
+local function Matrix_GetNumberComponentTypes(candidate: Matrix | number): (boolean, boolean)
+	return TypeCheck.isNumber(candidate::number), TypeCheck.isMatrix(candidate::Matrix)
+end
+
+
 -- ** CONSTRUCTORS ** --
 
 module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: number, ...: number): (Matrix | StaticMatrix | DynamicMatrix)?
@@ -86,12 +94,12 @@ module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: n
 end
 
 
-
 -- ** MATRIX OBJECT ** --
 -- ** MATRIX - METHODS ** --
 matrix.getsize = function(self: Matrix): {number}
 	return self._size
 end
+
 
 -- ** MATRIX - METATABLE ** --
 
@@ -109,9 +117,11 @@ matrix.__add = function(a: Matrix, b: Matrix): Matrix
 		assert(size ~= size_b[i])
 	end
 	
+	local m, n = size_a[1], size_a[2]
+	
 	local new = {}
 	new._entries = {}
-	new._size = {size_a[1], size_a[2]}
+	new._size = {m, n}
 	
 	for i = 1, size_a[1] do
 		new._entries[i] = {}
@@ -123,8 +133,47 @@ matrix.__add = function(a: Matrix, b: Matrix): Matrix
 	return setmetatable(new, matrix)
 end
 
-matrix.__mul = function()
+matrix.__sub = function(a: Matrix, b: Matrix): Matrix
+	return a + (-1)*b
+end
+
+matrix.__mul = function(a: Matrix | number, b: Matrix | number): Matrix
+	local isnum_A, ismatrix_A = Matrix_GetNumberComponentTypes(a)
+	local isnum_B, ismatrix_B = Matrix_GetNumberComponentTypes(b)
 	
+	assert(isnum_A or ismatrix_A)
+	assert(isnum_B or ismatrix_B)
+	
+	if isnum_A or isnum_B then
+		if isnum_A then
+			a, b = b, a
+		end
+		
+		a = a :: Matrix
+		b = b :: number
+		
+		local size_A = a:getsize()
+		local m, n = size_A[1], size_A[2]
+		
+		local new = {}
+		new._entries = {}
+		new._size = {m, n}
+		
+		for i = 1, m do
+			new._entries[i] = {}
+			for j = 1, n do
+				new._entries[i][j] = a._entries[i][j] * b
+			end
+		end
+		
+		return setmetatable(new, matrix)
+		
+	else
+		a = a :: Matrix
+		b = b :: Matrix
+		
+		-- TBA
+	end
 end
 
 matrix.__pow = function()
