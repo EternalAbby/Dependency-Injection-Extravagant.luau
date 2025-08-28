@@ -8,19 +8,18 @@ local matrix = {}
 local static = {}
 local dynamic = {}
 
--- 2-dimension static matrix (?)
+-- This type is used for a 2D matrix, used in math.
 export type Matrix = setmetatable<{
 	["_entries"]: {[number]: {number}},
 	["_size"]: {number}
 }, typeof(matrix)>
 
--- 2-dimension matrix, but stored as a 1-dimension array (?)
+-- This type is used for a 2D matrix, but stored as a 1D array, and size cannot be changed.
 export type StaticMatrix = {
 	number
 }
 
--- N-dimension dynamic matrix (?)
--- maybe this special type shouldn't be able to use operations like normal matrix, manual read/write only)
+-- This type is used to create a N-dimension matrix. Can only do manual read/write. Module built-in only helps with changing sizes.
 export type DynamicMatrix = {
 	DynamicMatrix | number
 }
@@ -73,7 +72,7 @@ module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: n
 	elseif name == "DynamicMatrix" then
 		local res = {}
 		
-		-- TODO: helper function
+		-- TODO: test helper function
 		local function helper(cur_arr: DynamicMatrix, cur_idx: number): DynamicMatrix | {number}
 			if cur_idx == #axes then
 				return table.create(axes[cur_idx], 0) :: {number}
@@ -172,7 +171,29 @@ matrix.__mul = function(a: Matrix | number, b: Matrix | number): Matrix
 		a = a :: Matrix
 		b = b :: Matrix
 		
-		-- TBA
+		local size_A = a:getsize()
+		local size_B = b:getsize()
+		
+		assert(#size_A == #size_B)
+		assert(size_A[2] == size_B[1])
+		
+		local m, n, p = size_A[1], size_A[2], size_B[3]
+		
+		local new = {}
+		new._entries = {}
+		new._size = {m, p}
+		
+		-- TODO: test function
+		for i = 1, m do
+			new._entries[i] = {}
+			for j = 1, p do
+				for k = 1, n do
+					new._entries[i][j] = a._entries[i][k] * b._entries[k][j]
+				end
+			end
+		end
+		
+		return setmetatable(new, matrix)
 	end
 end
 
@@ -189,6 +210,10 @@ static.__index = static
 static.__metatable = "Static_Matrix"
 
 static.__add = function()
+	
+end
+
+static.__mul = function()
 	
 end
 
