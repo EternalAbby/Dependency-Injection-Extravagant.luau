@@ -754,4 +754,4 @@ module.__tostring = function(self: ComplexNumber): string
 	return `({self.real} {complex_sign} {complex_number}𝒊)`
 end
 
-return module::typeof(module)
+return module

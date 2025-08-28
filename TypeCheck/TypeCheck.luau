@@ -167,4 +167,4 @@ module.isInstance = function(candidate: Instance, classname: string?): boolean
 	return true
 end
 
-return module::typeof(module)
+return module
