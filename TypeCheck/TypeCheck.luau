@@ -15,7 +15,13 @@ type ComplexNumber = setmetatable<{
 }, {__metatable: "ComplexNumber"}>
 
 -- This type is taken from the Matrix module.
-type Matrix = {}
+type Matrix = setmetatable<{
+	["_entries"]: {[number]: {number}},
+	["_size"]: {[number]: number}
+}, {__metatable: "Matrix"}>
+
+-- This type is taken from the Matrix module.
+type StaticMatrix = {}
 
 -- This type is taken from the Matrix module.
 type DynamicMatrix = {}
@@ -88,6 +94,12 @@ end
 
 -- This function is used in the Matrix module.
 module.isSquaredMatrix = function(candidate: Matrix): boolean
+	-- TBA
+	return false
+end
+
+-- This function is used in the Matrix module.
+module.isStaticMatrix = function(candidate: StaticMatrix): boolean
 	-- TBA
 	return false
 end

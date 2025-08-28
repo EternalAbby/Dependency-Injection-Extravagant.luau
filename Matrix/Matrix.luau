@@ -11,27 +11,34 @@ local dynamic = {}
 -- This type is used for a 2D matrix, used in math.
 export type Matrix = setmetatable<{
 	["_entries"]: {[number]: {number}},
-	["_size"]: {number}
+	["_size"]: {[number]: number}
 }, typeof(matrix)>
 
 -- This type is used for a 2D matrix, but stored as a 1D array, and size cannot be changed.
-export type StaticMatrix = {
+export type StaticMatrix = setmetatable<{
 	number
-}
+}, typeof(static)>
 
 -- This type is used to create a N-dimension matrix. Can only do manual read/write. Module built-in only helps with changing sizes.
-export type DynamicMatrix = {
+export type DynamicMatrix = setmetatable<{
 	DynamicMatrix | number
-}
+}, typeof(dynamic)>
 
 
 -- ** INTERNAL FUNCTIONS ** --
+
 
 local function Matrix_GetNumberComponentTypes(candidate: Matrix | number): (boolean, boolean)
 	return TypeCheck.isNumber(candidate::number), TypeCheck.isMatrix(candidate::Matrix)
 end
 
+local function Static_GetNumberComponentTypes(candidate: StaticMatrix | number): (boolean, boolean)
+	return TypeCheck.isNumber(candidate::number), TypeCheck.isStaticMatrix(candidate::StaticMatrix)
+end
 
+local function Dynamic_GetNumberComponentTypes(candidate: DynamicMatrix | number): (boolean, boolean)
+	return TypeCheck.isNumber(candidate::number), TypeCheck.isDynamicMatrix(candidate::DynamicMatrix)
+end
 -- ** CONSTRUCTORS ** --
 
 module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: number, ...: number): (Matrix | StaticMatrix | DynamicMatrix)?
@@ -67,28 +74,30 @@ module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: n
 		assert(TypeCheck.isNumber(n, false))
 		
 		local res = table.create(m * n, fill)
-		return setmetatable(res, static)
+		return setmetatable(res, static) :: StaticMatrix
 		
 	elseif name == "DynamicMatrix" then
 		local res = {}
 		
+		return setmetatable(res, dynamic) :: DynamicMatrix
+		
 		-- TODO: test helper function
-		local function helper(cur_arr: DynamicMatrix, cur_idx: number): DynamicMatrix | {number}
-			if cur_idx == #axes then
-				return table.create(axes[cur_idx], 0) :: {number}
-			end
+		-- local function helper(cur_arr: DynamicMatrix, cur_idx: number): DynamicMatrix | {number}
+		-- 	if cur_idx == #axes then
+		-- 		return table.create(axes[cur_idx], 0) :: {number}
+		-- 	end
 			
-			for _ = 1, axes[cur_idx] do 
-				local newAxis = {}
-				helper(newAxis, cur_idx + 1)
-			end
+		-- 	for _ = 1, axes[cur_idx] do 
+		-- 		local newAxis = {}
+		-- 		helper(newAxis, cur_idx + 1)
+		-- 	end
 			
-			return cur_arr
-		end
+		-- 	return cur_arr
+		-- end
 		
-		return setmetatable(helper(res, 1) :: DynamicMatrix, dynamic)
+		-- return setmetatable(helper(res, 1) :: DynamicMatrix, dynamic)
 	end
-		
+	
 	return nil
 end
 
@@ -104,7 +113,13 @@ end
 
 matrix.__index = matrix
 
-matrix.__metatable = "Matrix"
+-- FIXME: This may be a bug with the Luau LSP extension. (?)
+-- `TypeCheck` module uses a different type for these objects, which causes the Luau LSP to throw a false-positive type error.
+-- The type error doesn't happen on Studio. Only happens because of the vsc extension.
+-- This `__metatable`, along with the ones in other objects, have to be type casted so that the type error doesn't happen.
+-- This code comment and type cast *may* be removed later, as it serves no purpose other than not causing the type error.
+-- Possible fix: Move the type checking into this module instead.
+matrix.__metatable = "Matrix" :: "Matrix"
 
 matrix.__add = function(a: Matrix, b: Matrix): Matrix
 	local size_a = a:getsize()
@@ -197,35 +212,20 @@ matrix.__mul = function(a: Matrix | number, b: Matrix | number): Matrix
 	end
 end
 
-matrix.__pow = function()
-	
-end
-
 
 -- ** STATIC MATRIX OBJECT ** --
 -- ** STATIC MATRIX - METATABLE ** --
 
 static.__index = static
 
-static.__metatable = "Static_Matrix"
+static.__metatable = "StaticMatrix" :: "StaticMatrix"
 
-static.__add = function()
-	
-end
-
-static.__mul = function()
-	
-end
 
 -- ** DYNAMIC MATRIX OBJECT ** --
 -- ** DYNAMIC MATRIX - METATABLE ** --
 
 dynamic.__index = dynamic
 
-dynamic.__newindex = function()
-	
-end
-
-dynamic.__metatable = "Dynamic_Matrix"
+dynamic.__metatable = "DynamicMatrix" :: "DynamicMatrix"
 
 return module
