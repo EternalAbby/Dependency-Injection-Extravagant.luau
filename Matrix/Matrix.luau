@@ -60,7 +60,7 @@ module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: n
 		for i = 1, m do
 			res._entries[i] = {}
 			for j = 1, n do
-				res._entries[i][j] = 0
+				res._entries[i][j] = fill
 			end
 		end
 		
@@ -79,23 +79,19 @@ module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: n
 	elseif name == "DynamicMatrix" then
 		local res = {}
 		
-		return setmetatable(res, dynamic) :: DynamicMatrix
-		
-		-- TODO: test helper function
-		-- local function helper(cur_arr: DynamicMatrix, cur_idx: number): DynamicMatrix | {number}
-		-- 	if cur_idx == #axes then
-		-- 		return table.create(axes[cur_idx], 0) :: {number}
-		-- 	end
+		local function helper(cur_arr: {[number]: {} | number}, cur_idx: number): {} | number
+			if cur_idx == #axes then
+				return table.create(axes[cur_idx], fill)
+			end
 			
-		-- 	for _ = 1, axes[cur_idx] do 
-		-- 		local newAxis = {}
-		-- 		helper(newAxis, cur_idx + 1)
-		-- 	end
+			for idx = 1, axes[cur_idx] do
+				cur_arr[idx] = helper({}, cur_idx + 1)
+			end
 			
-		-- 	return cur_arr
-		-- end
+			return cur_arr
+		end
 		
-		-- return setmetatable(helper(res, 1) :: DynamicMatrix, dynamic)
+		return setmetatable(helper(res, 1) :: {}, dynamic) :: DynamicMatrix
 	end
 	
 	return nil
