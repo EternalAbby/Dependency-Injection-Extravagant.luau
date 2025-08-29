@@ -16,12 +16,16 @@ export type Matrix = setmetatable<{
 
 -- This type is used for a 2D matrix, but stored as a 1D array, and size cannot be changed.
 export type StaticMatrix = setmetatable<{
-	number
+	["_entries"]: {[number]: number},
+	["_size"]: {[number]: number}
 }, typeof(static)>
+
+type RepeatingEntry = {RepeatingEntry | number}
 
 -- This type is used to create a N-dimension matrix. Can only do manual read/write. Module built-in only helps with changing sizes.
 export type DynamicMatrix = setmetatable<{
-	DynamicMatrix | number
+	["_entries"]: RepeatingEntry,
+	["_size"]: {[number]: number}
 }, typeof(dynamic)>
 
 
@@ -41,7 +45,7 @@ local function Dynamic_GetNumberComponentTypes(candidate: DynamicMatrix | number
 end
 -- ** CONSTRUCTORS ** --
 
-module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: number, ...: number): (Matrix | StaticMatrix | DynamicMatrix)?
+module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: number?, ...: number): (Matrix | StaticMatrix | DynamicMatrix)?
 	assert(TypeCheck.isString(name))
 	
 	local axes = {...}
@@ -49,9 +53,10 @@ module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: n
 	if name == "Matrix" then
 		local m, n = axes[1], axes[2]
 		
-		assert(TypeCheck.isNumber(fill, true))
 		assert(TypeCheck.isNumber(m, false))
 		assert(TypeCheck.isNumber(n, false))
+		
+		fill = if TypeCheck.isNumber(fill::number, false) then fill::number else 0
 		
 		local res = {}
 		res._entries = {}
@@ -69,29 +74,22 @@ module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: n
 	elseif name == "StaticMatrix" then
 		local m, n = axes[1], axes[2]
 		
-		assert(TypeCheck.isNumber(fill, true))
 		assert(TypeCheck.isNumber(m, false))
 		assert(TypeCheck.isNumber(n, false))
+		
+		fill = if TypeCheck.isNumber(fill::number, false) then fill::number else 0
 		
 		local res = table.create(m * n, fill)
 		return setmetatable(res, static) :: StaticMatrix
 		
 	elseif name == "DynamicMatrix" then
-		local res = {}
+		local res: {} | number = if TypeCheck.isNumber(fill::number, false) then fill::number else 0
 		
-		local function helper(cur_arr: {[number]: {} | number}, cur_idx: number): {} | number
-			if cur_idx == #axes then
-				return table.create(axes[cur_idx], fill)
-			end
-			
-			for idx = 1, axes[cur_idx] do
-				cur_arr[idx] = helper({}, cur_idx + 1)
-			end
-			
-			return cur_arr
+		for idx = #axes, 1, -1 do
+			res = table.create(axes[idx], res)
 		end
 		
-		return setmetatable(helper(res, 1) :: {}, dynamic) :: DynamicMatrix
+		return setmetatable(res::{}, dynamic) :: DynamicMatrix
 	end
 	
 	return nil
