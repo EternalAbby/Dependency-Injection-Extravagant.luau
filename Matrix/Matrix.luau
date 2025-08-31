@@ -86,16 +86,8 @@ local function isDynamicMatrix(candidate: DynamicMatrix): boolean
 	return true
 end
 
-local function Matrix_GetNumberComponentTypes(candidate: Matrix | number): (boolean, boolean)
+local function Matrix_GetComponentTypes(candidate: Matrix | number): (boolean, boolean)
 	return TypeCheck.isNumber(candidate::number), isMatrix(candidate::Matrix)
-end
-
-local function Static_GetNumberComponentTypes(candidate: StaticMatrix | number): (boolean, boolean)
-	return TypeCheck.isNumber(candidate::number), isStaticMatrix(candidate::StaticMatrix)
-end
-
-local function Dynamic_GetNumberComponentTypes(candidate: DynamicMatrix | number): (boolean, boolean)
-	return TypeCheck.isNumber(candidate::number), isDynamicMatrix(candidate::DynamicMatrix)
 end
 
 
@@ -128,13 +120,14 @@ module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: n
 		return setmetatable(res, matrix) :: Matrix
 		
 	elseif name == "StaticMatrix" then
-		-- TODO: redo this object type
 		local m, n = axes[1], axes[2]
 		
 		assert(TypeCheck.isNumber(m, false))
 		assert(TypeCheck.isNumber(n, false))
 		
-		local res = table.create(m * n, fill)
+		local res = {}
+		res._entries = table.create(m * n, fill)
+		res._size = {m, n}
 		return setmetatable(res, static) :: StaticMatrix
 		
 	elseif name == "DynamicMatrix" then
@@ -157,12 +150,18 @@ end
 
 -- ** MATRIX OBJECT ** --
 -- ** MATRIX - METHODS ** --
+
 matrix.getsize = function(self: Matrix): {number}
 	return self._size
 end
 
 matrix.getentry = function(self: Matrix, m: number, n: number): number
 	return self._entries[m][n]
+end
+
+matrix.setentry = function(self: Matrix, value: number, m: number, n: number): boolean
+	self._entries[m][n] = value
+	return true
 end
 
 matrix.transpose = function(self: Matrix): Matrix
@@ -216,8 +215,8 @@ matrix.__sub = function(a: Matrix, b: Matrix): Matrix
 end
 
 matrix.__mul = function(a: Matrix | number, b: Matrix | number): Matrix
-	local isnum_A, ismatrix_A = Matrix_GetNumberComponentTypes(a)
-	local isnum_B, ismatrix_B = Matrix_GetNumberComponentTypes(b)
+	local isnum_A, ismatrix_A = Matrix_GetComponentTypes(a)
+	local isnum_B, ismatrix_B = Matrix_GetComponentTypes(b)
 	
 	assert(isnum_A or ismatrix_A)
 	assert(isnum_B or ismatrix_B)
@@ -290,6 +289,24 @@ static.getentry = function(self: StaticMatrix, m: number, n: number): number
 	return self._entries[idx]
 end
 
+static.setentry = function(self: StaticMatrix, value: number, m: number, n: number): boolean
+	local size_n = self._size[2]
+	local idx = size_n * (m - 1) + n
+	self._entries[idx] = value
+	return true
+end
+
+static.transpose = function(self: StaticMatrix): StaticMatrix
+	local m, n = self._size[1], self._size[2]
+	local new = module.new("StaticMatrix", 0, n, m)::StaticMatrix
+	
+	for i = 1, m do
+		for j = 1, n do
+			new._entries[n * (i - 1) + j] = self._entries[m * (j - 1) + i] -- TODO: test this function
+		end
+	end
+	return new
+end
 
 -- ** STATIC MATRIX - METATABLE ** --
 
