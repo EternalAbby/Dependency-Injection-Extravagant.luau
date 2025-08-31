@@ -31,22 +31,80 @@ export type DynamicMatrix = setmetatable<{
 
 -- ** INTERNAL FUNCTIONS ** --
 
+local function isMatrix(candidate: Matrix): boolean
+	if getmetatable(candidate) ~= "Matrix" then
+		return false
+	end
+	
+	if #candidate._size ~= 2 then
+		return false
+	end
+	
+	local m, n = candidate._size[1], candidate._size[2]
+	
+	for i = 1, m do
+		for j = 1, n do
+			if not candidate._entries[i] or not candidate._entries[i][j] or not TypeCheck.isNumber(candidate._entries[i][j], false) then
+				return false
+			end
+		end
+	end
+	
+	return true
+end
+
+local function isStaticMatrix(candidate: StaticMatrix): boolean
+	if getmetatable(candidate) ~= "StaticMatrix" then
+		return false
+	end
+	
+	if #candidate._size ~= 2 then
+		return false
+	end
+	
+	local m, n = candidate._size[1], candidate._size[2]
+	local total_size = m * n
+	
+	if #candidate._entries ~= total_size then
+		return false
+	end
+	
+	for i = 1, total_size do
+		if not TypeCheck.isNumber(candidate._entries[i], false) then
+			return false
+		end
+	end
+	
+	return true
+end
+
+local function isDynamicMatrix(candidate: DynamicMatrix): boolean
+	if getmetatable(candidate) ~= "DynamicMatrix" then
+		return false
+	end
+	
+	return true
+end
 
 local function Matrix_GetNumberComponentTypes(candidate: Matrix | number): (boolean, boolean)
-	return TypeCheck.isNumber(candidate::number), TypeCheck.isMatrix(candidate::Matrix)
+	return TypeCheck.isNumber(candidate::number), isMatrix(candidate::Matrix)
 end
 
 local function Static_GetNumberComponentTypes(candidate: StaticMatrix | number): (boolean, boolean)
-	return TypeCheck.isNumber(candidate::number), TypeCheck.isStaticMatrix(candidate::StaticMatrix)
+	return TypeCheck.isNumber(candidate::number), isStaticMatrix(candidate::StaticMatrix)
 end
 
 local function Dynamic_GetNumberComponentTypes(candidate: DynamicMatrix | number): (boolean, boolean)
-	return TypeCheck.isNumber(candidate::number), TypeCheck.isDynamicMatrix(candidate::DynamicMatrix)
+	return TypeCheck.isNumber(candidate::number), isDynamicMatrix(candidate::DynamicMatrix)
 end
+
+
 -- ** CONSTRUCTORS ** --
 
 module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: number?, ...: number): (Matrix | StaticMatrix | DynamicMatrix)?
 	assert(TypeCheck.isString(name))
+	
+	fill = if TypeCheck.isNumber(fill::number, false) then fill::number else 0
 	
 	local axes = {...}
 	
@@ -55,8 +113,6 @@ module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: n
 		
 		assert(TypeCheck.isNumber(m, false))
 		assert(TypeCheck.isNumber(n, false))
-		
-		fill = if TypeCheck.isNumber(fill::number, false) then fill::number else 0
 		
 		local res = {}
 		res._entries = {}
@@ -72,24 +128,27 @@ module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: n
 		return setmetatable(res, matrix) :: Matrix
 		
 	elseif name == "StaticMatrix" then
+		-- TODO: redo this object type
 		local m, n = axes[1], axes[2]
 		
 		assert(TypeCheck.isNumber(m, false))
 		assert(TypeCheck.isNumber(n, false))
 		
-		fill = if TypeCheck.isNumber(fill::number, false) then fill::number else 0
-		
 		local res = table.create(m * n, fill)
 		return setmetatable(res, static) :: StaticMatrix
 		
 	elseif name == "DynamicMatrix" then
-		local res: {} | number = if TypeCheck.isNumber(fill::number, false) then fill::number else 0
+		local entry: {} | number = fill
 		
 		for idx = #axes, 1, -1 do
-			res = table.create(axes[idx], res)
+			assert(TypeCheck.isNumber(axes[idx], false))
+			entry = table.create(axes[idx], entry)
 		end
 		
-		return setmetatable(res::{}, dynamic) :: DynamicMatrix
+		local res = {}
+		res._entries = entry
+		res._size = axes
+		return setmetatable(res, dynamic) :: DynamicMatrix
 	end
 	
 	return nil
@@ -102,18 +161,29 @@ matrix.getsize = function(self: Matrix): {number}
 	return self._size
 end
 
+matrix.getentry = function(self: Matrix, m: number, n: number): number
+	return self._entries[m][n]
+end
+
+matrix.transpose = function(self: Matrix): Matrix
+	local m, n = self._size[1], self._size[2]
+	local new = module.new("Matrix", 0, n, m)::Matrix
+	
+	for i = 1, m do
+		for j = 1, n do
+			new._entries[j][i] = self._entries[i][j]
+		end
+	end
+	
+	return new
+end
+
 
 -- ** MATRIX - METATABLE ** --
 
 matrix.__index = matrix
 
--- FIXME: This may be a bug with the Luau LSP extension. (?)
--- `TypeCheck` module uses a different type for these objects, which causes the Luau LSP to throw a false-positive type error.
--- The type error doesn't happen on Studio. Only happens because of the vsc extension.
--- This `__metatable`, along with the ones in other objects, have to be type casted so that the type error doesn't happen.
--- This code comment and type cast *may* be removed later, as it serves no purpose other than not causing the type error.
--- Possible fix: Move the type checking into this module instead.
-matrix.__metatable = "Matrix" :: "Matrix"
+matrix.__metatable = "Matrix"
 
 matrix.__add = function(a: Matrix, b: Matrix): Matrix
 	local size_a = a:getsize()
@@ -208,18 +278,52 @@ end
 
 
 -- ** STATIC MATRIX OBJECT ** --
+-- ** STATIC MATRIX - METHODS ** --
+
+static.getsize = function(self: StaticMatrix): {number}
+	return self._size
+end
+
+static.getentry = function(self: StaticMatrix, m: number, n: number): number
+	local size_n = self._size[2]
+	local idx = size_n * (m - 1) + n
+	return self._entries[idx]
+end
+
+
 -- ** STATIC MATRIX - METATABLE ** --
 
 static.__index = static
 
-static.__metatable = "StaticMatrix" :: "StaticMatrix"
+static.__metatable = "StaticMatrix"
 
 
 -- ** DYNAMIC MATRIX OBJECT ** --
+-- ** DYNAMIC MATRIX - METHODS ** --
+
+dynamic.getsize = function(self: DynamicMatrix): {number}
+	return self._size
+end
+
+dynamic.getentry = function(self: DynamicMatrix, ...: number): number?
+	local axes = {...}
+	local res = self._entries[axes[1]] :: {any}
+	
+	if #axes ~= #self._size then
+		return nil
+	end
+	
+	for i = 2, #axes do
+		res = res[axes[i]]
+	end
+	
+	return res :: number
+end
+
 -- ** DYNAMIC MATRIX - METATABLE ** --
 
 dynamic.__index = dynamic
 
-dynamic.__metatable = "DynamicMatrix" :: "DynamicMatrix"
+dynamic.__metatable = "DynamicMatrix"
 
 return module
