@@ -92,13 +92,6 @@ module.cis = function(theta: number): ComplexNumber
 	return cosine + sine
 end
 
---[[
-compute the fast fourier transform
-idk if it's possible to do
-]]
-module.fft = function()
-	-- TBA
-end
 
 -- ** METHODS ** --
 
