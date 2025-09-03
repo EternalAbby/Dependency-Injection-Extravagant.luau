@@ -72,19 +72,22 @@ module.hasTimer = function(id: TimerId): boolean
 	return storage[id] ~= nil
 end
 
-module.isTimer = function(self: Timer): boolean
-	return self and storage[self._id] and storage[self._id] == self
+module.isTimer = function(candidate: Timer): boolean
+	return candidate and storage[candidate._id] and storage[candidate._id] == candidate
 end
 
 module.Start = function(self: Timer): boolean
+	local start = os.clock()
+	
 	assert(module.isTimer(self))
 	
 	if self._isActive then
 		return false
 	end
 	
-	self._startTime = os.clock()
-	self._stopTime = self._startTime + self._duration
+	self._startTime = start
+	self._stopTime = start + self._duration
+	self._pauseTime = -1
 	self._isActive = true
 	
 	return true
@@ -93,24 +96,27 @@ end
 module.Resume = function(self: Timer): boolean
 	assert(module.isTimer(self))
 	
-	if self._isActive then
+	if self._isActive or self._startTime == -1 or self._stopTime == -1 or self._pauseTime == -1 then
 		return false
 	end
 	
 	self._stopTime += self._pauseTime - self._startTime
+	self._pauseTime = -1
 	self._isActive = true
 	
 	return true
 end
 
 module.Pause = function(self: Timer): boolean
+	local pause = os.clock()
+	
 	assert(module.isTimer(self))
 	
 	if not self._isActive then
 		return false
 	end
 	
-	self._pauseTime = os.clock()
+	self._pauseTime = pause
 	self._isActive = false
 	
 	return true
@@ -123,6 +129,9 @@ module.Stop = function(self: Timer): boolean
 		return false
 	end
 	
+	self._startTime = -1
+	self._stopTime = -1
+	self._pauseTime = -1
 	self._isActive = false
 	
 	return true
@@ -166,10 +175,13 @@ module.isEnded = function(self: Timer): boolean
 	return not self._isActive
 end
 
+
 module.__index = module
 
-module.__newindex = function(t: Timer, key: any, value: any): nil
-	error(`Attempted to create a new index/key in <ComplexNumber> object.\nObject representation: {t} | Index/Key: {key} | Value: {value}`)
+module.__newindex = function(self: Timer, key: any, value: any): nil
+	error(`Attempted to create a new index/key in <ComplexNumber> object.\nObject representation: {self}\nIndex/Key: {key}\nValue: {value}`)
 end
+
+module.__metatable = "Timer"
 
 return module
