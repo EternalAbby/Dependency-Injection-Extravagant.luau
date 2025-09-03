@@ -104,55 +104,66 @@ end
 
 -- ** CONSTRUCTORS ** --
 
-module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: number?, ...: number): (Matrix | StaticMatrix | DynamicMatrix)?
+module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: number | RepeatingEntry, ...: number): (Matrix | StaticMatrix | DynamicMatrix)?
 	assert(TypeCheck.isString(name))
-	
-	fill = if TypeCheck.isNumber(fill::number, false) then fill::number else 0
 	
 	local axes = {...}
 	
-	if name == "Matrix" then
-		local m, n = axes[1], axes[2]
-		
-		assert(TypeCheck.isNumber(m, false))
-		assert(TypeCheck.isNumber(n, false))
+	if typeof(fill) == "table" then
+		-- TBA
 		
 		local res = {}
-		res._entries = {}
-		res._size = {m, n}
-		
-		for i = 1, m do
-			res._entries[i] = {}
-			for j = 1, n do
-				res._entries[i][j] = fill
-			end
-		end
+		res._entries = fill
+		res._size = {}
 		
 		return setmetatable(res, matrix) :: Matrix
 		
-	elseif name == "StaticMatrix" then
-		local m, n = axes[1], axes[2]
+	else
+		fill = if TypeCheck.isNumber(fill::number, false) then fill::number else 0
 		
-		assert(TypeCheck.isNumber(m, false))
-		assert(TypeCheck.isNumber(n, false))
-		
-		local res = {}
-		res._entries = table.create(m * n, fill)
-		res._size = {m, n}
-		return setmetatable(res, static) :: StaticMatrix
-		
-	elseif name == "DynamicMatrix" then
-		local entry: {} | number = fill
-		
-		for idx = #axes, 1, -1 do
-			assert(TypeCheck.isNumber(axes[idx], false))
-			entry = table.create(axes[idx], entry)
+		if name == "Matrix" then
+			local m, n = axes[1], axes[2]
+			
+			assert(TypeCheck.isNumber(m, false))
+			assert(TypeCheck.isNumber(n, false))
+			
+			local res = {}
+			res._entries = {}
+			res._size = {m, n}
+			
+			for i = 1, m do
+				res._entries[i] = {}
+				for j = 1, n do
+					res._entries[i][j] = fill
+				end
+			end
+			
+			return setmetatable(res, matrix) :: Matrix
+			
+		elseif name == "StaticMatrix" then
+			local m, n = axes[1], axes[2]
+			
+			assert(TypeCheck.isNumber(m, false))
+			assert(TypeCheck.isNumber(n, false))
+			
+			local res = {}
+			res._entries = table.create(m * n, fill)
+			res._size = {m, n}
+			return setmetatable(res, static) :: StaticMatrix
+			
+		elseif name == "DynamicMatrix" then
+			local entry: {} | number = fill
+			
+			for idx = #axes, 1, -1 do
+				assert(TypeCheck.isNumber(axes[idx], false))
+				entry = table.create(axes[idx], entry)
+			end
+			
+			local res = {}
+			res._entries = entry
+			res._size = axes
+			return setmetatable(res, dynamic) :: DynamicMatrix
 		end
-		
-		local res = {}
-		res._entries = entry
-		res._size = axes
-		return setmetatable(res, dynamic) :: DynamicMatrix
 	end
 	
 	return nil
@@ -280,19 +291,21 @@ matrix.__mul = function(a: Matrix | number, b: Matrix | number): Matrix
 		assert(#size_A == #size_B)
 		assert(size_A[2] == size_B[1])
 		
-		local m, n, p = size_A[1], size_A[2], size_B[3]
+		local m, p = size_A[1], size_B[2]
 		
 		local new = {}
 		new._entries = {}
 		new._size = {m, p}
 		
-		-- TODO: test function
 		for i = 1, m do
 			new._entries[i] = {}
 			for j = 1, p do
-				for k = 1, n do
-					new._entries[i][j] = a._entries[i][k] * b._entries[k][j]
+				local res = 0
+				
+				for r = 1, p do
+					res += a._entries[i][r] * b._entries[r][j]
 				end
+				new._entries[i][j] = res
 			end
 		end
 		
@@ -338,11 +351,14 @@ static.transpose = function(self: StaticMatrix): StaticMatrix
 	local m, n = self._size[1], self._size[2]
 	local new = module.new("StaticMatrix", 0, n, m)::StaticMatrix
 	
-	for i = 1, m do
-		for j = 1, n do
-			new._entries[n * (i - 1) + j] = self._entries[m * (j - 1) + i] -- TODO: test this function
+	for i = 1, n do
+		for j = 1, m do
+			local i_j = m * (i - 1) + j
+			local j_i = n * (j - 1) + i
+			new._entries[i_j] = self._entries[j_i]
 		end
 	end
+	
 	return new
 end
 
