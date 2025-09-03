@@ -1,10 +1,6 @@
 --!strict
 
 local module = {}
-module.__index = module
-module.__newindex = function()
-	error()
-end
 
 type TimerId = string | number
 
@@ -168,6 +164,12 @@ module.isEnded = function(self: Timer): boolean
 	end
 	
 	return not self._isActive
+end
+
+module.__index = module
+
+module.__newindex = function(t: Timer, key: any, value: any): nil
+	error(`Attempted to create a new index/key in <ComplexNumber> object.\nObject representation: {t} | Index/Key: {key} | Value: {value}`)
 end
 
 return module

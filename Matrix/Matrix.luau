@@ -42,6 +42,10 @@ local function isMatrix(candidate: Matrix): boolean
 	
 	local m, n = candidate._size[1], candidate._size[2]
 	
+	if not TypeCheck.isNumber(m, false) or not TypeCheck.isNumber(n, false) then
+		return false
+	end
+	
 	for i = 1, m do
 		for j = 1, n do
 			if not candidate._entries[i] or not candidate._entries[i][j] or not TypeCheck.isNumber(candidate._entries[i][j], false) then
@@ -63,6 +67,11 @@ local function isStaticMatrix(candidate: StaticMatrix): boolean
 	end
 	
 	local m, n = candidate._size[1], candidate._size[2]
+	
+	if not TypeCheck.isNumber(m, false) or not TypeCheck.isNumber(n, false) then
+		return false
+	end
+	
 	local total_size = m * n
 	
 	if #candidate._entries ~= total_size then
@@ -82,6 +91,8 @@ local function isDynamicMatrix(candidate: DynamicMatrix): boolean
 	if getmetatable(candidate) ~= "DynamicMatrix" then
 		return false
 	end
+	
+	-- TBA
 	
 	return true
 end
@@ -152,19 +163,32 @@ end
 -- ** MATRIX - METHODS ** --
 
 matrix.getsize = function(self: Matrix): {number}
+	assert(isMatrix(self))
+	
 	return self._size
 end
 
 matrix.getentry = function(self: Matrix, m: number, n: number): number
+	assert(isMatrix(self))
+	assert(TypeCheck.isNumber(m, false))
+	assert(TypeCheck.isNumber(n, false))
+	
 	return self._entries[m][n]
 end
 
 matrix.setentry = function(self: Matrix, value: number, m: number, n: number): boolean
+	assert(isMatrix(self))
+	assert(TypeCheck.isNumber(value, false))
+	assert(TypeCheck.isNumber(m, false))
+	assert(TypeCheck.isNumber(n, false))
+	
 	self._entries[m][n] = value
 	return true
 end
 
 matrix.transpose = function(self: Matrix): Matrix
+	assert(isMatrix(self))
+	
 	local m, n = self._size[1], self._size[2]
 	local new = module.new("Matrix", 0, n, m)::Matrix
 	
@@ -185,14 +209,15 @@ matrix.__index = matrix
 matrix.__metatable = "Matrix"
 
 matrix.__add = function(a: Matrix, b: Matrix): Matrix
+	assert(isMatrix(a))
+	assert(isMatrix(b))
+	
 	local size_a = a:getsize()
 	local size_b = b:getsize()
 	
 	assert(#size_a == #size_b)
-	
-	for i, size in size_a do
-		assert(size ~= size_b[i])
-	end
+	assert(size_a[1] == size_b[1])
+	assert(size_a[2] == size_b[2])
 	
 	local m, n = size_a[1], size_a[2]
 	
@@ -280,16 +305,27 @@ end
 -- ** STATIC MATRIX - METHODS ** --
 
 static.getsize = function(self: StaticMatrix): {number}
+	assert(isStaticMatrix(self))
+	
 	return self._size
 end
 
 static.getentry = function(self: StaticMatrix, m: number, n: number): number
+	assert(isStaticMatrix(self))
+	assert(TypeCheck.isNumber(m, false))
+	assert(TypeCheck.isNumber(n, false))
+	
 	local size_n = self._size[2]
 	local idx = size_n * (m - 1) + n
 	return self._entries[idx]
 end
 
 static.setentry = function(self: StaticMatrix, value: number, m: number, n: number): boolean
+	assert(isStaticMatrix(self))
+	assert(TypeCheck.isNumber(value, false))
+	assert(TypeCheck.isNumber(m, false))
+	assert(TypeCheck.isNumber(n, false))
+	
 	local size_n = self._size[2]
 	local idx = size_n * (m - 1) + n
 	self._entries[idx] = value
@@ -297,6 +333,8 @@ static.setentry = function(self: StaticMatrix, value: number, m: number, n: numb
 end
 
 static.transpose = function(self: StaticMatrix): StaticMatrix
+	assert(isStaticMatrix(self))
+	
 	local m, n = self._size[1], self._size[2]
 	local new = module.new("StaticMatrix", 0, n, m)::StaticMatrix
 	
@@ -314,15 +352,43 @@ static.__index = static
 
 static.__metatable = "StaticMatrix"
 
+static.__add = function(a: StaticMatrix, b: StaticMatrix): StaticMatrix
+	assert(isStaticMatrix(a))
+	assert(isStaticMatrix(b))
+	
+	-- TBA
+	
+	return module.new("StaticMatrix", 0) :: StaticMatrix
+end
+
+static.__sub = function(a: StaticMatrix, b: StaticMatrix): StaticMatrix
+	return a + (-1)*b
+end
+
+static.__mul = function(a: StaticMatrix | number, b: StaticMatrix | number): StaticMatrix
+	local isnum_A, ismatrix_A = Matrix_GetComponentTypes(a)
+	local isnum_B, ismatrix_B = Matrix_GetComponentTypes(b)
+	
+	assert(isnum_A or ismatrix_A)
+	assert(isnum_B or ismatrix_B)
+	
+	-- TBA
+	
+	return module.new("StaticMatrix", 0) :: StaticMatrix
+end
 
 -- ** DYNAMIC MATRIX OBJECT ** --
 -- ** DYNAMIC MATRIX - METHODS ** --
 
 dynamic.getsize = function(self: DynamicMatrix): {number}
+	assert(isDynamicMatrix(self))
+	
 	return self._size
 end
 
 dynamic.getentry = function(self: DynamicMatrix, ...: number): number?
+	assert(isDynamicMatrix(self))
+	
 	local axes = {...}
 	local res = self._entries[axes[1]] :: {any}
 	
@@ -331,6 +397,7 @@ dynamic.getentry = function(self: DynamicMatrix, ...: number): number?
 	end
 	
 	for i = 2, #axes do
+		assert(TypeCheck.isNumber(axes[i], false))
 		res = res[axes[i]]
 	end
 	
