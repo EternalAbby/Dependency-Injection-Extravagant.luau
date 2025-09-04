@@ -1,19 +1,3 @@
 # ExMath module
 
-## What is this module?
-
-This is the ExMath module.
-
-TBA
-
-## Author's note
-
-Thank you for using the ExMath module.
-
-TBA
-
-~ ExMath module made by Abby (@EternalAbby).
-
-## Prerequisite
-
-- TBA
+This link will direct you to the Wiki of this module: <[ExMath Wiki](https://github.com/EternalAbby/Dependency-Injection-Extravagant.luau/wiki/ExMath)>

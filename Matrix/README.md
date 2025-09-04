@@ -1,19 +1,3 @@
 # Matrix module
 
-## What is this module?
-
-This is the Matrix module.
-
-TBA
-
-## Author's note
-
-Thank you for using the Matrix module.
-
-TBA
-
-~ Matrix module made by Abby (@EternalAbby).
-
-## Prerequisite
-
-- TypeCheck v0.4.0
+This link will direct you to the Wiki of this module: <[Matrix Wiki](https://github.com/EternalAbby/Dependency-Injection-Extravagant.luau/wiki/Matrix)>
