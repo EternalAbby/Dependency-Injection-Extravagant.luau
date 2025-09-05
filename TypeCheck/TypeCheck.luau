@@ -36,44 +36,6 @@ module.isNumber = function(candidate: number, allowSpecial: boolean?): boolean
 	return true
 end
 
--- This function is used in the ComplexNumber module.
-module.isRawComplexNumber = function(candidate: RawComplexNumber): boolean
-	if typeof(candidate) ~= "table" then
-		return false
-	end
-	
-	if not module.isNumber(candidate.real, false) then
-		return false
-	end
-	
-	if not module.isNumber(candidate.complex, false) then
-		return false
-	end
-	
-	return true
-end
-
--- This function is used in the ComplexNumber module.
-module.isComplexNumber = function(candidate: ComplexNumber): boolean
-	if typeof(candidate) ~= "table" then
-		return false
-	end
-	
-	if getmetatable(candidate) ~= "ComplexNumber" then
-		return false
-	end
-	
-	if not module.isNumber(candidate.real, false) then
-		return false
-	end
-	
-	if not module.isNumber(candidate.complex, false) then
-		return false
-	end
-	
-	return true
-end
-
 module.isBoolean = function(candidate: boolean | nil, exclude_nil: boolean?): boolean
 	if not exclude_nil and typeof(candidate) == "nil" then
 		return true
