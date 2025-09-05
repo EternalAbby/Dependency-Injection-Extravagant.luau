@@ -6,6 +6,7 @@ local module = {}
 -- ** TYPE DEFINITIONS ** --
 
 type TimerId = string | number
+type TimerStorage = {[TimerId]: Timer}
 
 export type Timer = setmetatable<{
 	_duration: number,
@@ -16,7 +17,7 @@ export type Timer = setmetatable<{
 	_id: TimerId
 }, typeof(module)>
 
-local storage: {[TimerId]: Timer} = {}
+local storage: TimerStorage = {}
 
 
 -- ** INTERNAL FUNCTIONS ** --
@@ -64,6 +65,9 @@ module.new = function(duration: number, id: TimerId): Timer
 	return storage[id]
 end
 
+
+-- ** FUNCTIONS ** --
+
 -- Function: Removes the <Timer> object by using TimerId.
 module.remove = function(id: TimerId): boolean
 	assert(isNumber(id::number) or isString(id::string))
@@ -73,9 +77,6 @@ module.remove = function(id: TimerId): boolean
 	end
 	return false
 end
-
-
--- ** FUNCTIONS ** --
 
 -- Function: Gets the <Timer> object by using TimerId.
 module.getTimer = function(id: TimerId): Timer
