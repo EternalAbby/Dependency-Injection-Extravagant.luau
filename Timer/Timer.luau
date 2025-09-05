@@ -2,6 +2,9 @@
 
 local module = {}
 
+
+-- ** TYPE DEFINITIONS ** --
+
 type TimerId = string | number
 
 export type Timer = setmetatable<{
@@ -15,6 +18,9 @@ export type Timer = setmetatable<{
 
 local storage: {[TimerId]: Timer} = {}
 
+
+-- ** INTERNAL FUNCTIONS ** --
+
 -- This function is from the TypeCheck module.
 local function isString(candidate: string): boolean
 	if typeof(candidate) ~= "string" then
@@ -25,21 +31,26 @@ local function isString(candidate: string): boolean
 end
 
 -- This function is from the TypeCheck module.
-local function isNumber(candidate: number, allowSpecial: boolean?): boolean
+local function isNumber(candidate: number): boolean
 	if typeof(candidate) ~= "number" then
 		return false
 	end
 	
-	if not allowSpecial and (candidate ~= candidate or math.abs(candidate) == math.huge) then
+	if candidate ~= candidate or math.abs(candidate) == math.huge then
 		return false
 	end
 	
 	return true
 end
 
+
+-- ** CONSTRUCTORS ** --
+
+-- Constructor: Creates a new <Timer> object.
 module.new = function(duration: number, id: TimerId): Timer
 	assert(isNumber(duration))
-	assert(isNumber(id::number, true) or isString(id::string))
+	assert(isNumber(id::number) or isString(id::string))
+	assert(module.hasTimer(id))
 	
 	local new = {}
 	new._duration = duration
@@ -53,8 +64,9 @@ module.new = function(duration: number, id: TimerId): Timer
 	return storage[id]
 end
 
-module.destroy = function(id: TimerId): boolean
-	assert(isNumber(id::number, true) or isString(id::string))
+-- Function: Removes the <Timer> object by using TimerId.
+module.remove = function(id: TimerId): boolean
+	assert(isNumber(id::number) or isString(id::string))
 	if storage[id] then
 		storage[id] = nil
 		return true
@@ -62,20 +74,30 @@ module.destroy = function(id: TimerId): boolean
 	return false
 end
 
+
+-- ** FUNCTIONS ** --
+
+-- Function: Gets the <Timer> object by using TimerId.
 module.getTimer = function(id: TimerId): Timer
-	assert(isNumber(id::number, true) or isString(id::string))
+	assert(isNumber(id::number) or isString(id::string))
 	return storage[id]
 end
 
+-- Function: Checks whether a <Timer> object with TimerId already exists.
 module.hasTimer = function(id: TimerId): boolean
-	assert(isNumber(id::number, true) or isString(id::string))
+	assert(isNumber(id::number) or isString(id::string))
 	return storage[id] ~= nil
 end
 
+-- Function: Checks whether the candidate is a valid <Timer> object.
 module.isTimer = function(candidate: Timer): boolean
 	return candidate and storage[candidate._id] and storage[candidate._id] == candidate
 end
 
+
+-- ** METHODS ** --
+
+-- Method: Simulate starting the <Timer> object.
 module.Start = function(self: Timer): boolean
 	local start = os.clock()
 	
@@ -93,6 +115,7 @@ module.Start = function(self: Timer): boolean
 	return true
 end
 
+-- Method: Simulate resuming the <Timer> object.
 module.Resume = function(self: Timer): boolean
 	assert(module.isTimer(self))
 	
@@ -107,6 +130,7 @@ module.Resume = function(self: Timer): boolean
 	return true
 end
 
+-- Method: Simulate pausing the <Timer> object.
 module.Pause = function(self: Timer): boolean
 	local pause = os.clock()
 	
@@ -122,6 +146,7 @@ module.Pause = function(self: Timer): boolean
 	return true
 end
 
+-- Method: Simulate stopping the <Timer> object.
 module.Stop = function(self: Timer): boolean
 	assert(module.isTimer(self))
 	
@@ -137,6 +162,7 @@ module.Stop = function(self: Timer): boolean
 	return true
 end
 
+-- Method: Returns the current time remaining in the <Timer> object. Returns -1 if not active at the time of function call.
 module.GetCurrentTime = function(self: Timer): number
 	assert(module.isTimer(self))
 	
@@ -151,20 +177,23 @@ module.GetCurrentTime = function(self: Timer): number
 	return -1
 end
 
+-- Method: Sets the duration of the <Timer> object to the <seconds> parameter. Does not change simulated stop time.
 module.SetDuration = function(self: Timer, seconds: number): boolean
 	assert(module.isTimer(self))
-	assert(isNumber(seconds, false))
+	assert(isNumber(seconds))
 	
 	self._duration = seconds
 	
 	return false
 end
 
+-- Method: Checks whether the <Timer> object is running.
 module.isRunning = function(self: Timer): boolean
 	assert(module.isTimer(self))
 	return self._isActive and os.clock() < self._stopTime
 end
 
+-- Method: Checks whether the <Timer> object has ended.
 module.isEnded = function(self: Timer): boolean
 	assert(module.isTimer(self))
 	
@@ -176,10 +205,12 @@ module.isEnded = function(self: Timer): boolean
 end
 
 
+-- ** METAMETHODS ** --
+
 module.__index = module
 
 module.__newindex = function(self: Timer, key: any, value: any): nil
-	error(`Attempted to create a new index/key in <ComplexNumber> object.\nObject representation: {self}\nIndex/Key: {key}\nValue: {value}`)
+	error(`Attempted to create a new index/key in <Timer> object.\nObject representation: {self}\nIndex/Key: {key}\nValue: {value}`)
 end
 
 module.__metatable = "Timer"

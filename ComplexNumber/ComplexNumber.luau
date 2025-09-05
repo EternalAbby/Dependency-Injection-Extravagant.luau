@@ -6,6 +6,7 @@ local tostring_signs = {"-", "+", "+"}
 
 local module = {}
 
+
 -- ** TYPE DEFINITIONS ** --
 
 export type RawComplexNumber = {
@@ -113,6 +114,7 @@ module.fromPolar = function(magnitude: number, argument: number): ComplexNumber
 	local new = CreateRawComplexNumber(real, complex)
 	return setmetatable(new, module)
 end
+
 
 -- ** FUNCTIONS ** --
 
@@ -543,6 +545,7 @@ module.raw_tostring = function(self: RawComplexNumber, representation: ("general
 	
 	return `({self.real} {complex_sign} {complex_number}𝒊)`
 end
+
 
 -- ** METAMETHODS ** --
 -- ** METAMETHODS - INITIAL ** --
