@@ -50,6 +50,7 @@ end
 -- Constructor: Creates a new <Timer> object.
 module.new = function(duration: number, id: TimerId): Timer
 	assert(isNumber(duration))
+	assert(duration > 0)
 	assert(isNumber(id::number) or isString(id::string))
 	assert(module.hasTimer(id))
 	
@@ -79,7 +80,7 @@ module.remove = function(id: TimerId): boolean
 end
 
 -- Function: Gets the <Timer> object by using TimerId.
-module.getTimer = function(id: TimerId): Timer
+module.getTimer = function(id: TimerId): Timer?
 	assert(isNumber(id::number) or isString(id::string))
 	return storage[id]
 end
@@ -125,7 +126,6 @@ module.Resume = function(self: Timer): boolean
 	end
 	
 	self._stopTime += self._pauseTime - self._startTime
-	self._pauseTime = -1
 	self._isActive = true
 	
 	return true
@@ -167,7 +167,8 @@ end
 module.GetCurrentTime = function(self: Timer): number
 	assert(module.isTimer(self))
 	
-	if os.clock() - self._startTime >= self._stopTime then
+	if self._pauseTime ~= -1 and os.clock() - self._pauseTime >= self._stopTime
+	or self._pauseTime == -1 and os.clock() - self._startTime >= self._stopTime then
 		self._isActive = false
 	end
 	
@@ -185,7 +186,7 @@ module.SetDuration = function(self: Timer, seconds: number): boolean
 	
 	self._duration = seconds
 	
-	return false
+	return true
 end
 
 -- Method: Checks whether the <Timer> object is running.
