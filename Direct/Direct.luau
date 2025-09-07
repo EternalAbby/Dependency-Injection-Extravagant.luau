@@ -73,16 +73,6 @@ Function: Attempts to find the first instance that satisfy <name>. This is not c
 Return the first instance to satisfy <name>. If failed, returns `nil`.
 ]]
 module.FindFirstInstance = function(name: string | {string}): Instance?
-	-- FIXME: Although this function has been made into an iterative solution, it still performs slower than its recursive counterpart.
-	-- The bottleneck may be caused from the stack filling operations (specifically, the for loop inside of the main while loop).
-	-- Additionally, these are the only main differences between the iterative solution, and the recursive one;
-	--		1. Iterative loops over every children of the "current_root".
-	--		2. Iterative creates a new data dictionary for each child.
-	--		3. Iterative adds those data to the "stack".
-	-- Out of all of these differences, 1. may be impacting the most for average time complexity, which is necessary to optimize,
-	-- as the recursive solution does not have to go through every children before going to the next depth, so performance are lost
-	-- when there are too many children.
-	
 	local isString = TypeCheck.isString(name::string)
 	local isArray = TypeCheck.isArray(name::{string})
 	
@@ -131,8 +121,6 @@ module.FindFirstInstance = function(name: string | {string}): Instance?
 		local current_tofind = dp[left_str_idx][right_str_idx]
 		local found = false
 		
-		-- FIXME: This loop may be the bottleneck of the iterative solution
-		-- for slower performance than the recursive solution.
 		for _, child in current_root:GetChildren() do
 			if child.Name == current_tofind then
 				if right_str_idx == #name then

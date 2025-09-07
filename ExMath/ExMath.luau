@@ -25,6 +25,10 @@ module.fibonacci_sequence = function(n: number): number
 	return a
 end
 
+module.percentage = function(count: number, total: number): number
+	return (count / total) * 100
+end
+
 module.stirling_approximation = function(n: number): number
 	return math.sqrt(2 * math.pi * n) * ((n / module.e) ^ n)
 end
