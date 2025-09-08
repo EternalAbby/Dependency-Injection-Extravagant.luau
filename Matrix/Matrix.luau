@@ -372,9 +372,24 @@ static.__add = function(a: StaticMatrix, b: StaticMatrix): StaticMatrix
 	assert(isStaticMatrix(a))
 	assert(isStaticMatrix(b))
 	
-	-- TBA
+	local size_a = a:getsize()
+	local size_b = b:getsize()
 	
-	return module.new("StaticMatrix", 0) :: StaticMatrix
+	assert(#size_a == #size_b)
+	assert(size_a[1] == size_b[1])
+	assert(size_a[2] == size_b[2])
+	
+	local m, n = size_a[1], size_a[2]
+	
+	local new = {}
+	new._entries = table.create(m * n, 0)
+	new._size = {m, n}
+	
+	for idx = 1, m * n do
+		new._entries[idx] = a._entries[idx] + b._entries[idx]
+	end
+	
+	return setmetatable(new, static)
 end
 
 static.__sub = function(a: StaticMatrix, b: StaticMatrix): StaticMatrix
@@ -388,9 +403,57 @@ static.__mul = function(a: StaticMatrix | number, b: StaticMatrix | number): Sta
 	assert(isnum_A or ismatrix_A)
 	assert(isnum_B or ismatrix_B)
 	
-	-- TBA
-	
-	return module.new("StaticMatrix", 0) :: StaticMatrix
+	if isnum_A or isnum_B then
+		if isnum_A then
+			a, b = b, a
+		end
+		
+		a = a :: StaticMatrix
+		b = b :: number
+		
+		local size_A = a:getsize()
+		local m, n = size_A[1], size_A[2]
+		
+		local new = {}
+		new._entries = table.create(m * n, 0)
+		new._size = {m, n}
+		
+		for idx = 1, m * n do
+			new._entries[idx] = a._entries[idx] * b
+		end
+		
+		return setmetatable(new, static)
+		
+	else
+		a = a :: StaticMatrix
+		b = b :: StaticMatrix
+		
+		local size_A = a:getsize()
+		local size_B = b:getsize()
+		
+		assert(#size_A == #size_B)
+		assert(size_A[2] == size_B[1])
+		
+		local m, p = size_A[1], size_B[2]
+		
+		local new = {}
+		new._entries = table.create(m * p, 0)
+		new._size = {m, p}
+		
+		for i = 1, m * p do
+			local res = 0
+			
+			-- TBA
+			-- use a sum variable
+			-- use math to find col, row of current entry
+			-- use math to reach the respective col, row entries to calculate the new entry
+			-- lots of math for this part
+			
+			new._entries[i] = res
+		end
+		
+		return setmetatable(new, static)
+	end
 end
 
 -- ** DYNAMIC MATRIX OBJECT ** --
