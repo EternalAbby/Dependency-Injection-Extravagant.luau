@@ -434,22 +434,23 @@ static.__mul = function(a: StaticMatrix | number, b: StaticMatrix | number): Sta
 		assert(#size_A == #size_B)
 		assert(size_A[2] == size_B[1])
 		
-		local m, p = size_A[1], size_B[2]
+		local m, n, p = size_A[1], size_A[2], size_B[2]
 		
 		local new = {}
 		new._entries = table.create(m * p, 0)
 		new._size = {m, p}
 		
 		for i = 1, m * p do
-			local res = 0
+			local val = 0
+			local row = (i - 1) % p + 1
+			local col = (i - 1) // p + 1
 			
-			-- TBA
-			-- use a sum variable
-			-- use math to find col, row of current entry
-			-- use math to reach the respective col, row entries to calculate the new entry
-			-- lots of math for this part
+			-- TODO: test function
+			for j = 1, n do
+				val += a._entries[row * n + j] * b._entries[col * j + row]
+			end
 			
-			new._entries[i] = res
+			new._entries[i] = val
 		end
 		
 		return setmetatable(new, static)
