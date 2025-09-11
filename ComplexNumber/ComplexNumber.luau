@@ -17,6 +17,10 @@ export type ComplexNumber = setmetatable<{
 	["complex"]: number
 }, typeof(module)>
 
+type AnyNumber = ComplexNumber | RawComplexNumber | number
+type ComplexOnly = ComplexNumber | number
+type RawComplexOnly = RawComplexNumber | number
+type ObjectOnly = ComplexNumber | RawComplexNumber
 
 -- ** INTERNAL FUNCTIONS ** --
 
@@ -73,6 +77,271 @@ local function GetNumberComponentTypes(candidate: ComplexNumber | number): (bool
 	return isNumber(candidate::number), isComplexNumber(candidate::ComplexNumber)
 end
 
+local function GNCT(candidate: AnyNumber): (boolean, boolean, boolean)
+	return isNumber(candidate::number), isRawComplexNumber(candidate::RawComplexNumber), isComplexNumber(candidate::ComplexNumber)
+end
+
+-- Computes complex addition and returns the real and complex components.
+local function Complex_Addition(a: AnyNumber, b: AnyNumber, err_msg_a: string, err_msg_b: string, ignore_A: boolean?, ignore_B: boolean?): (number, number)
+	local isnum_A, israw_A, iscomplex_A = GNCT(a)
+	local isnum_B, israw_B, iscomplex_B = GNCT(b)
+	
+	if not ignore_A then
+		assert(isnum_A or israw_A or iscomplex_A, err_msg_a)
+	end
+	if not ignore_B then
+		assert(isnum_B or israw_B or iscomplex_B, err_msg_b)
+	end
+	
+	local real, complex = 0, 0
+	
+	if isnum_A or isnum_B then
+		if isnum_A then
+			a, b = b, a
+		end
+		
+		a = a :: ObjectOnly
+		b = b :: number
+		
+		real = a.real + b
+		complex = a.complex
+		
+	else
+		a = a :: ObjectOnly
+		b = b :: ObjectOnly
+		
+		real = a.real + b.real
+		complex = a.complex + b.complex
+	end
+	
+	return real, complex
+end
+
+-- Computes complex subtraction and returns the real and complex components.
+local function Complex_Subtraction(a: AnyNumber, b: AnyNumber, err_msg_a: string, err_msg_b: string, ignore_A: boolean?, ignore_B: boolean?): (number, number)
+	local isnum_A, israw_A, iscomplex_A = GNCT(a)
+	local isnum_B, israw_B, iscomplex_B = GNCT(b)
+	
+	if not ignore_A then
+		assert(isnum_A or israw_A or iscomplex_A, err_msg_a)
+	end
+	if not ignore_B then
+		assert(isnum_B or israw_B or iscomplex_B, err_msg_b)
+	end
+	
+	local real, complex = 0, 0
+	
+	if isnum_A or isnum_B then
+		if isnum_A then
+			a, b = b, a
+		end
+		
+		a = a :: ObjectOnly
+		b = b :: number
+		
+		real = a.real - b
+		complex = a.complex
+		
+	else
+		a = a :: ObjectOnly
+		b = b :: ObjectOnly
+		
+		real = a.real - b.real
+		complex = a.complex - b.complex
+	end
+	
+	return real, complex
+end
+
+-- Computes complex multiplication and returns the real and complex components.
+local function Complex_Multiplication(a: AnyNumber, b: AnyNumber, err_msg_a: string, err_msg_b: string, ignore_A: boolean?, ignore_B: boolean?): (number, number)
+	local isnum_A, israw_A, iscomplex_A = GNCT(a)
+	local isnum_B, israw_B, iscomplex_B = GNCT(b)
+	
+	if not ignore_A then
+		assert(isnum_A or israw_A or iscomplex_A, err_msg_a)
+	end
+	if not ignore_B then
+		assert(isnum_B or israw_B or iscomplex_B, err_msg_b)
+	end
+	
+	local real, complex = 0, 0
+	
+	if isnum_A or isnum_B then
+		if isnum_A then
+			a, b = b, a
+		end
+		
+		a = a :: ObjectOnly
+		b = b :: number
+		
+		real = a.real * b
+		complex = a.complex * b
+		
+	else
+		a = a :: ObjectOnly
+		b = b :: ObjectOnly
+		
+		real = a.real * b.real - a.complex * b.complex
+		complex = a.real * b.complex + a.complex * b.real
+	end
+	
+	return real, complex
+end
+
+-- Computes complex division and returns the real and complex components.
+local function Complex_Division(a: AnyNumber, b: AnyNumber, err_msg_a: string, err_msg_b: string, err_msg_div0: string, ignore_A: boolean?, ignore_B: boolean?): (number, number)
+	local isnum_A, israw_A, iscomplex_A = GNCT(a)
+	local isnum_B, israw_B, iscomplex_B = GNCT(b)
+	
+	if not ignore_A then
+		assert(isnum_A or israw_A or iscomplex_A, err_msg_a)
+	end
+	if not ignore_B then
+		assert(isnum_B or israw_B or iscomplex_B, err_msg_b)
+	end
+	
+	local real, complex = 0, 0
+	
+	if isnum_A or isnum_B then
+		if isnum_A then
+			a, b = b, a
+		end
+		
+		a = a :: ObjectOnly
+		b = b :: number
+		
+		assert(b ~= 0, err_msg_div0)
+		
+		local real_numerator = a.real * b
+		local complex_numerator = a.complex * b
+		local denominator = b ^ 2
+		
+		real = real_numerator / denominator
+		complex = complex_numerator / denominator
+		
+	else
+		a = a :: ObjectOnly
+		b = b :: ObjectOnly
+		
+		assert(b.real ~= 0 and b.complex ~= 0, err_msg_div0)
+		
+		local real_numerator = a.real * b.real + a.complex * b.complex
+		local complex_numerator = a.complex * b.real - a.real * b.complex
+		local denominator = b.real ^ 2 + b.complex ^ 2
+		
+		real = real_numerator / denominator
+		complex = complex_numerator / denominator
+	end
+	
+	return real, complex
+end
+
+-- Computes complex exponentiation and returns the real and complex components.
+local function Complex_Exponentiation(a: AnyNumber, b: AnyNumber, err_msg_a: string, err_msg_b: string, err_msg_div0: string, err_msg_0_pow_cmplx: string, ignore_A: boolean?, ignore_B: boolean?): (number, number)
+	-- TODO: test this function as its complexity isn't easy to perform mental calculation easily
+	local isnum_A, israw_A, iscomplex_A = GNCT(a)
+	local isnum_B, israw_B, iscomplex_B = GNCT(b)
+	
+	if not ignore_A then
+		assert(isnum_A or israw_A or iscomplex_A, err_msg_a)
+	end
+	if not ignore_B then
+		assert(isnum_B or israw_B or iscomplex_B, err_msg_b)
+	end
+	
+	local real, complex = 0, 0
+	
+	if isnum_A or isnum_B then
+		if isnum_A then
+			a, b = b, a
+		end
+		
+		a = a :: ObjectOnly
+		b = b :: number
+		
+		-- Simple case: complex ^ 0
+		if b == 0 then
+			return 1, 0
+		end
+		
+		-- Simple case: 0 ^ number
+		if a.real == 0 and a.complex == 0 then
+			
+			-- Case: 0 ^ +real
+			if b > 0 then
+				return 0, 0
+				
+			-- Case: 0 ^ -real
+			elseif b < 0 then
+				error(err_msg_div0)
+			end
+			
+		-- Simple case: real ^ real
+		elseif a.complex == 0 then
+			return a.real ^ b, 0
+		end
+		
+		-- Main case: complex ^ real
+		local base_dot_product = a.real ^ 2 + a.complex ^ 2
+		local base_argument = math.atan2(a.complex, a.real)
+		
+		local term_1 = base_dot_product ^ (b / 2)
+		local term_3_arg = b * base_argument
+		local term_3_real = math.cos(term_3_arg)
+		local term_3_complex = math.sin(term_3_arg)
+		
+		real = term_1 * term_3_real
+		complex = term_1 * term_3_complex
+		
+	else
+		a = a :: ObjectOnly
+		b = b :: ObjectOnly
+		
+		-- Simple case: complex ^ 0
+		if b.real == 0 and b.complex == 0 then
+			return 1, 0
+		end
+		
+		-- Simple case: 0 ^ number
+		if a.real == 0 and a.complex == 0 then
+			
+			-- Case: 0 ^ (purely-complex)
+			if b.real == 0 and b.complex ~= 0 then
+				error(err_msg_0_pow_cmplx)
+				
+			-- Case: 0 ^ +real
+			elseif b.real > 0 then
+				return 0, 0
+				
+			-- Case: 0 ^ -real
+			elseif b.real < 0 then
+				error(err_msg_div0)
+			end
+			
+		-- Simple case: real ^ real
+		elseif a.complex == 0 and b.complex then
+			return a.real ^ b.real, 0
+		end
+		
+		-- Main case: complex ^ complex
+		local base_dot_product = a.real ^ 2 + a.complex ^ 2
+		local base_argument = math.atan2(a.complex, a.real)
+		
+		local term_1 = base_dot_product ^ (b.real / 2)
+		local term_2 = math.exp(-b.complex * base_argument)
+		local term_12 = term_1 * term_2
+		
+		local term_3_arg = b.real * base_argument + b.complex * math.log(base_dot_product) / 2
+		local term_3_real = math.cos(term_3_arg)
+		local term_3_complex = math.sin(term_3_arg)
+		
+		real = term_12 * term_3_real
+		complex = term_12 * term_3_complex
+	end
+	
+	return real, complex
+end
 
 -- ** CONSTRUCTORS ** --
 
@@ -102,7 +371,7 @@ end
 local complexUnit = module.new(0, 1)
 
 --[[
-Constructor: Creates a new <ComplexNumber> object that is equivalent to (1 + 0𝒊).
+Constructor: Creates a new `ComplexNumber` object that is equivalent to (1 + 0𝒊).
 This constructor essentially creates and returns a unit for the real component.
 ]]
 module.real_unit = function(): ComplexNumber
@@ -113,7 +382,7 @@ module.real_unit = function(): ComplexNumber
 end
 
 --[[
-Constructor: Creates a new <ComplexNumber> object that is equivalent to (0 + 1𝒊).
+Constructor: Creates a new `ComplexNumber` object that is equivalent to (0 + 1𝒊).
 This constructor essentially creates and returns the imaginary unit.
 ]]
 module.complex_unit = function(): ComplexNumber
@@ -167,14 +436,14 @@ end
 
 -- ** METHODS ** --
 
--- Method: Creates a new <ComplexNumber> object, whose real, and imaginary parts are copied from <self>.
+-- Method: Creates a new `ComplexNumber` object, whose real, and imaginary parts are copied from `self`.
 module.clone = function(self: ComplexNumber): ComplexNumber
 	assert(isComplexNumber(self), `Failed to perform \`:clone()\` method. Expected <ComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	return module.new(self.real, self.complex)
 end
 
 --[[
-Method: Computes the magnitude (modulus/absolute value) of <self>.
+Method: Computes the magnitude (modulus/absolute value) of `self`.
 Similarly, using `#` operator on a <ComplexNumber> object returns this result.
 ]]
 module.magnitude = function(self: ComplexNumber): number
@@ -182,19 +451,19 @@ module.magnitude = function(self: ComplexNumber): number
 	return math.sqrt(self.real ^ 2 + self.complex ^ 2)
 end
 
--- Method: Computes the complex argument (counter-clockwise angle from the positive real axis) of <self>.
+-- Method: Computes the complex argument (counter-clockwise angle from the positive real axis) of `self`.
 module.argument = function(self: ComplexNumber): number
 	assert(isComplexNumber(self), `Failed to perform \`:argument()\` method. Expected <ComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	return math.atan2(self.complex, self.real)
 end
 
--- Method: Creates a new <ComplexNumber> object that is the complex conjugate of <self>.
+-- Method: Creates a new <ComplexNumber> object that is the complex conjugate of `self`.
 module.conjugate = function(self: ComplexNumber): ComplexNumber
 	assert(isComplexNumber(self), `Failed to perform \`:conjugate()\` method. Expected <ComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	return module.new(self.real, -self.complex)
 end
 
--- Method: Returns both the magnitude, and the complex argument of <self>.
+-- Method: Returns both the magnitude, and the complex argument of `self`.
 module.polar = function(self: ComplexNumber): (number, number)
 	assert(isComplexNumber(self), `Failed to perform \`:polar()\` method. Expected <ComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	local r = self:magnitude()
@@ -245,7 +514,7 @@ module.raw_add = function(self: RawComplexNumber, ...: RawComplexNumber | number
 	return true
 end
 
--- RawMethod: Modify the components of <self> by performing subtraction to it for each operand.
+-- RawMethod: Modify the components of `self` by performing complex subtraction to it for each operand.
 module.raw_sub = function(self: RawComplexNumber, ...: RawComplexNumber): nil
 	assert(isRawComplexNumber(self), `Failed to perform \`:raw_sub()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
@@ -263,7 +532,7 @@ module.raw_sub = function(self: RawComplexNumber, ...: RawComplexNumber): nil
 	return nil
 end
 
--- RawMethod: Modify the components of <self> by performing multiplication to it for each operand.
+-- RawMethod: Modify the components of `self` by performing complex multiplication to it for each operand.
 module.raw_mul = function(self: RawComplexNumber, ...: RawComplexNumber): nil
 	assert(isRawComplexNumber(self), `Failed to perform \`:raw_mul()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
@@ -284,7 +553,7 @@ module.raw_mul = function(self: RawComplexNumber, ...: RawComplexNumber): nil
 	return nil
 end
 
--- RawMethod: Modify the components of <self> by performing division to it for each operand.
+-- RawMethod: Modify the components of `self` by performing complex division to it for each operand.
 module.raw_div = function(self: RawComplexNumber, ...: RawComplexNumber): nil
 	assert(isRawComplexNumber(self), `Failed to perform \`:raw_div()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
@@ -310,7 +579,7 @@ module.raw_div = function(self: RawComplexNumber, ...: RawComplexNumber): nil
 	return nil
 end
 
--- RawMethod: Modify the components of <self> by performing int division to it for each operand.
+-- RawMethod: Modify the components of `self` by performing complex int division to it for each operand.
 module.raw_idiv = function(self: RawComplexNumber, ...: RawComplexNumber): nil
 	assert(isRawComplexNumber(self), `Failed to perform \`:raw_idiv()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
@@ -341,7 +610,7 @@ module.raw_mod = function(): nil
 	error("This is an invalid operation as of now.")
 end
 
--- RawMethod: Modify the components of <self> by performing exponentiation to it for each operand.
+-- RawMethod: Modify the components of `self` by performing complex exponentiation to it for each operand.
 module.raw_pow = function(self: RawComplexNumber, ...: RawComplexNumber): nil
 	assert(isRawComplexNumber(self), `Failed to perform \`:raw_pow()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
@@ -405,7 +674,7 @@ end
 
 -- ** RAW METHODS - EQUALITY COMPARISON ** --
 
--- RawMethod: Returns a boolean determining whether <self> is equivalent to every operands.
+-- RawMethod: Returns a boolean determining whether `self` is equivalent to every operands.
 module.raw_eq = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 	assert(isRawComplexNumber(self), `Failed to perform \`:raw_eq()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
@@ -429,7 +698,7 @@ module.raw_eq = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 	return true
 end
 
--- RawMethod: Returns a boolean determining whether <self> is less than every operands.
+-- RawMethod: Returns a boolean determining whether `self` is less than every operands.
 module.raw_lt = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 	assert(isRawComplexNumber(self), `Failed to perform \`:raw_lt()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
@@ -453,7 +722,7 @@ module.raw_lt = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 	return true
 end
 
--- RawMethod: Returns a boolean determining whether <self> is less than or equal to every operands.
+-- RawMethod: Returns a boolean determining whether `self` is less than or equal to every operands.
 module.raw_le = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 	assert(isRawComplexNumber(self), `Failed to perform \`:raw_le()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
@@ -477,7 +746,7 @@ module.raw_le = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 	return true
 end
 
--- RawMethod: Returns a boolean determining whether <self> is greater than every operands.
+-- RawMethod: Returns a boolean determining whether `self` is greater than every operands.
 module.raw_gt = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 	assert(isRawComplexNumber(self), `Failed to perform \`:raw_gt()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
@@ -501,7 +770,7 @@ module.raw_gt = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 	return true
 end
 
--- RawMethod: Returns a boolean determining whether <self> is greater than or equal to every operands.
+-- RawMethod: Returns a boolean determining whether `self` is greater than or equal to every operands.
 module.raw_ge = function(self: RawComplexNumber, ...: RawComplexNumber): boolean
 	assert(isRawComplexNumber(self), `Failed to perform \`:raw_ge()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
@@ -528,7 +797,7 @@ end
 
 -- ** RAW METHODS - FROM METHOD ** --
 
--- RawMethod: Computes the magnitude (modulus/absolute value) of <self>. Accepts valid `RawComplexNumber` types.
+-- RawMethod: Computes the magnitude (modulus/absolute value) of `self`. Accepts valid `RawComplexNumber` types.
 module.raw_magnitude = function(self: RawComplexNumber): number
 	assert(isRawComplexNumber(self), `Failed to perform \`:raw_magnitude()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
@@ -537,7 +806,7 @@ module.raw_magnitude = function(self: RawComplexNumber): number
 	return math.sqrt(self.real ^ 2 + self.complex ^ 2)
 end
 
--- RawMethod: Computes the complex argument (counter-clockwise angle from the positive real axis) of <self>. Accepts valid `RawComplexNumber` types.
+-- RawMethod: Computes the complex argument (counter-clockwise angle from the positive real axis) of `self`. Accepts valid `RawComplexNumber` types.
 module.raw_argument = function(self: RawComplexNumber): number
 	assert(isRawComplexNumber(self), `Failed to perform \`:raw_argument()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	return math.atan2(self.complex, self.real)
@@ -558,7 +827,7 @@ end
 -- ** RAW METHODS - OTHER ** --
 
 --[[
-RawMethod: Create a <string> representation formatted to display <self>, according to <representation>.
+RawMethod: Create a <string> representation formatted to display `self`, according to <representation>.
 Optional <representation> can be either "general", "rectangular", "polar". By default, always displays in "general" form.
 ]]
 module.raw_tostring = function(self: RawComplexNumber, representation: ("general" | "rectangular" | "polar" | "euler")?): string
