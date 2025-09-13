@@ -46,7 +46,7 @@ module.is_prime = function(n: number): boolean
 		end
 	end
 	
-	-- naive approach to check for prime numbers
+	-- trial division approach to check for prime numbers
 	-- optimization used: check only odd numbers, use the sqrt search cutoff technique without the sqrt, less heavy multiplication operation
 	local squared_n = n * n
 	local squared_cand, candidate = 100020001, 10001
