@@ -81,267 +81,93 @@ local function GNCT(candidate: AnyNumber): (boolean, boolean, boolean)
 	return isNumber(candidate::number), isRawComplexNumber(candidate::RawComplexNumber), isComplexNumber(candidate::ComplexNumber)
 end
 
--- Computes complex addition and returns the real and complex components.
-local function Complex_Addition(a: AnyNumber, b: AnyNumber, err_msg_a: string, err_msg_b: string, ignore_A: boolean?, ignore_B: boolean?): (number, number)
-	local isnum_A, israw_A, iscomplex_A = GNCT(a)
-	local isnum_B, israw_B, iscomplex_B = GNCT(b)
-	
-	if not ignore_A then
-		assert(isnum_A or israw_A or iscomplex_A, err_msg_a)
-	end
-	if not ignore_B then
-		assert(isnum_B or israw_B or iscomplex_B, err_msg_b)
-	end
+-- Computes the complex addition of `a` and `b` and returns the resulting real and complex components.
+local function Complex_Addition(a_real: number, a_complex: number, b_real: number, b_complex: number): (number, number)
+	local real, complex = 0, 0
+	real = a_real + b_real
+	complex = a_complex + b_complex
+	return real, complex
+end
+
+-- Computes the complex subtraction of `a` and `b` and returns the resulting real and complex components.
+local function Complex_Subtraction(a_real: number, a_complex: number, b_real: number, b_complex: number): (number, number)
+	local real, complex = 0, 0
+	real = a_real - b_real
+	complex = a_complex - b_complex
+	return real, complex
+end
+
+-- Computes the complex multiplication of `a` and `b` and returns the resulting real and complex components.
+local function Complex_Multiplication(a_real: number, a_complex: number, b_real: number, b_complex: number): (number, number)
+	local real, complex = 0, 0
+	real = a_real * b_real - a_complex * b_complex
+	complex = a_real * b_complex + a_complex * b_real
+	return real, complex
+end
+
+-- Computes the complex division of `a` and `b` and returns the resulting real and complex components.
+local function Complex_Division(a_real: number, a_complex: number, b_real: number, b_complex: number, err_msg_div0: string): (number, number)
+	assert(b_real ~= 0 and b_complex ~= 0, err_msg_div0)
 	
 	local real, complex = 0, 0
 	
-	if isnum_A or isnum_B then
-		if isnum_A then
-			a, b = b, a
+	local real_numerator = a_real * b_real + a_complex * b_complex
+	local complex_numerator = a_complex * b_real - a_real * b_complex
+	local denominator = b_real ^ 2 + b_complex ^ 2
+	
+	real = real_numerator / denominator
+	complex = complex_numerator / denominator
+	return real, complex
+end
+
+-- Computes the complex exponentiation of `a` and `b` and returns the resulting real and complex components.
+local function Complex_Exponentiation(a_real: number, a_complex: number, b_real: number, b_complex: number, err_msg_div0: string, err_msg_0_pow_cmplx: string): (number, number)
+	local real, complex = 0, 0
+	
+	-- Simple case: complex ^ 0
+	if b_real == 0 and b_complex == 0 then
+		return 1, 0
+	end
+	
+	-- Simple case: 0 ^ number
+	if a_real == 0 and a_complex == 0 then
+		
+		-- Case: 0 ^ (purely-complex)
+		if b_real == 0 and b_complex ~= 0 then
+			error(err_msg_0_pow_cmplx)
+			
+		-- Case: 0 ^ +real
+		elseif b_real > 0 then
+			return 0, 0
+			
+		-- Case: 0 ^ -real
+		elseif b_real < 0 then
+			error(err_msg_div0)
 		end
 		
-		a = a :: ObjectOnly
-		b = b :: number
-		
-		real = a.real + b
-		complex = a.complex
-		
-	else
-		a = a :: ObjectOnly
-		b = b :: ObjectOnly
-		
-		real = a.real + b.real
-		complex = a.complex + b.complex
+	-- Simple case: real ^ real
+	elseif a_complex == 0 and b_complex then
+		return a_real ^ b_real, 0
 	end
+	
+	-- Main case: complex ^ complex
+	local base_dot_product = a_real ^ 2 + a_complex ^ 2
+	local base_argument = math.atan2(a_complex, a_real)
+	
+	local term_1 = base_dot_product ^ (b_real / 2)
+	local term_2 = math.exp(-b_complex * base_argument)
+	local term_12 = term_1 * term_2
+	
+	local term_3_arg = b_real * base_argument + b_complex * math.log(base_dot_product) / 2
+	local term_3_real = math.cos(term_3_arg)
+	local term_3_complex = math.sin(term_3_arg)
+	
+	real = term_12 * term_3_real
+	complex = term_12 * term_3_complex
 	
 	return real, complex
 end
 
--- Computes complex subtraction and returns the real and complex components.
-local function Complex_Subtraction(a: AnyNumber, b: AnyNumber, err_msg_a: string, err_msg_b: string, ignore_A: boolean?, ignore_B: boolean?): (number, number)
-	local isnum_A, israw_A, iscomplex_A = GNCT(a)
-	local isnum_B, israw_B, iscomplex_B = GNCT(b)
-	
-	if not ignore_A then
-		assert(isnum_A or israw_A or iscomplex_A, err_msg_a)
-	end
-	if not ignore_B then
-		assert(isnum_B or israw_B or iscomplex_B, err_msg_b)
-	end
-	
-	local real, complex = 0, 0
-	
-	if isnum_A or isnum_B then
-		if isnum_A then
-			a, b = b, a
-		end
-		
-		a = a :: ObjectOnly
-		b = b :: number
-		
-		real = a.real - b
-		complex = a.complex
-		
-	else
-		a = a :: ObjectOnly
-		b = b :: ObjectOnly
-		
-		real = a.real - b.real
-		complex = a.complex - b.complex
-	end
-	
-	return real, complex
-end
-
--- Computes complex multiplication and returns the real and complex components.
-local function Complex_Multiplication(a: AnyNumber, b: AnyNumber, err_msg_a: string, err_msg_b: string, ignore_A: boolean?, ignore_B: boolean?): (number, number)
-	local isnum_A, israw_A, iscomplex_A = GNCT(a)
-	local isnum_B, israw_B, iscomplex_B = GNCT(b)
-	
-	if not ignore_A then
-		assert(isnum_A or israw_A or iscomplex_A, err_msg_a)
-	end
-	if not ignore_B then
-		assert(isnum_B or israw_B or iscomplex_B, err_msg_b)
-	end
-	
-	local real, complex = 0, 0
-	
-	if isnum_A or isnum_B then
-		if isnum_A then
-			a, b = b, a
-		end
-		
-		a = a :: ObjectOnly
-		b = b :: number
-		
-		real = a.real * b
-		complex = a.complex * b
-		
-	else
-		a = a :: ObjectOnly
-		b = b :: ObjectOnly
-		
-		real = a.real * b.real - a.complex * b.complex
-		complex = a.real * b.complex + a.complex * b.real
-	end
-	
-	return real, complex
-end
-
--- Computes complex division and returns the real and complex components.
-local function Complex_Division(a: AnyNumber, b: AnyNumber, err_msg_a: string, err_msg_b: string, err_msg_div0: string, ignore_A: boolean?, ignore_B: boolean?): (number, number)
-	local isnum_A, israw_A, iscomplex_A = GNCT(a)
-	local isnum_B, israw_B, iscomplex_B = GNCT(b)
-	
-	if not ignore_A then
-		assert(isnum_A or israw_A or iscomplex_A, err_msg_a)
-	end
-	if not ignore_B then
-		assert(isnum_B or israw_B or iscomplex_B, err_msg_b)
-	end
-	
-	local real, complex = 0, 0
-	
-	if isnum_A or isnum_B then
-		if isnum_A then
-			a, b = b, a
-		end
-		
-		a = a :: ObjectOnly
-		b = b :: number
-		
-		assert(b ~= 0, err_msg_div0)
-		
-		local real_numerator = a.real * b
-		local complex_numerator = a.complex * b
-		local denominator = b ^ 2
-		
-		real = real_numerator / denominator
-		complex = complex_numerator / denominator
-		
-	else
-		a = a :: ObjectOnly
-		b = b :: ObjectOnly
-		
-		assert(b.real ~= 0 and b.complex ~= 0, err_msg_div0)
-		
-		local real_numerator = a.real * b.real + a.complex * b.complex
-		local complex_numerator = a.complex * b.real - a.real * b.complex
-		local denominator = b.real ^ 2 + b.complex ^ 2
-		
-		real = real_numerator / denominator
-		complex = complex_numerator / denominator
-	end
-	
-	return real, complex
-end
-
--- Computes complex exponentiation and returns the real and complex components.
-local function Complex_Exponentiation(a: AnyNumber, b: AnyNumber, err_msg_a: string, err_msg_b: string, err_msg_div0: string, err_msg_0_pow_cmplx: string, ignore_A: boolean?, ignore_B: boolean?): (number, number)
-	-- TODO: test this function as its complexity isn't easy to perform mental calculation easily
-	local isnum_A, israw_A, iscomplex_A = GNCT(a)
-	local isnum_B, israw_B, iscomplex_B = GNCT(b)
-	
-	if not ignore_A then
-		assert(isnum_A or israw_A or iscomplex_A, err_msg_a)
-	end
-	if not ignore_B then
-		assert(isnum_B or israw_B or iscomplex_B, err_msg_b)
-	end
-	
-	local real, complex = 0, 0
-	
-	if isnum_A or isnum_B then
-		if isnum_A then
-			a, b = b, a
-		end
-		
-		a = a :: ObjectOnly
-		b = b :: number
-		
-		-- Simple case: complex ^ 0
-		if b == 0 then
-			return 1, 0
-		end
-		
-		-- Simple case: 0 ^ number
-		if a.real == 0 and a.complex == 0 then
-			
-			-- Case: 0 ^ +real
-			if b > 0 then
-				return 0, 0
-				
-			-- Case: 0 ^ -real
-			elseif b < 0 then
-				error(err_msg_div0)
-			end
-			
-		-- Simple case: real ^ real
-		elseif a.complex == 0 then
-			return a.real ^ b, 0
-		end
-		
-		-- Main case: complex ^ real
-		local base_dot_product = a.real ^ 2 + a.complex ^ 2
-		local base_argument = math.atan2(a.complex, a.real)
-		
-		local term_1 = base_dot_product ^ (b / 2)
-		local term_3_arg = b * base_argument
-		local term_3_real = math.cos(term_3_arg)
-		local term_3_complex = math.sin(term_3_arg)
-		
-		real = term_1 * term_3_real
-		complex = term_1 * term_3_complex
-		
-	else
-		a = a :: ObjectOnly
-		b = b :: ObjectOnly
-		
-		-- Simple case: complex ^ 0
-		if b.real == 0 and b.complex == 0 then
-			return 1, 0
-		end
-		
-		-- Simple case: 0 ^ number
-		if a.real == 0 and a.complex == 0 then
-			
-			-- Case: 0 ^ (purely-complex)
-			if b.real == 0 and b.complex ~= 0 then
-				error(err_msg_0_pow_cmplx)
-				
-			-- Case: 0 ^ +real
-			elseif b.real > 0 then
-				return 0, 0
-				
-			-- Case: 0 ^ -real
-			elseif b.real < 0 then
-				error(err_msg_div0)
-			end
-			
-		-- Simple case: real ^ real
-		elseif a.complex == 0 and b.complex then
-			return a.real ^ b.real, 0
-		end
-		
-		-- Main case: complex ^ complex
-		local base_dot_product = a.real ^ 2 + a.complex ^ 2
-		local base_argument = math.atan2(a.complex, a.real)
-		
-		local term_1 = base_dot_product ^ (b.real / 2)
-		local term_2 = math.exp(-b.complex * base_argument)
-		local term_12 = term_1 * term_2
-		
-		local term_3_arg = b.real * base_argument + b.complex * math.log(base_dot_product) / 2
-		local term_3_real = math.cos(term_3_arg)
-		local term_3_complex = math.sin(term_3_arg)
-		
-		real = term_12 * term_3_real
-		complex = term_12 * term_3_complex
-	end
-	
-	return real, complex
-end
 
 -- ** CONSTRUCTORS ** --
 
@@ -350,6 +176,8 @@ Constructor: Creates a new `RawComplexNumber` object from `real`, and `complex`.
 This expression is valid for both the general form, and the rectangular form.
 ]]
 module.newRaw = function(real: number, complex: number): RawComplexNumber
+	assert(isNumber(real))
+	assert(isNumber(complex))
 	return {
 		["real"] = real,
 		["complex"] = complex
@@ -492,6 +320,8 @@ module.raw_add = function(self: RawComplexNumber, ...: RawComplexNumber | number
 	assert(isRawComplexNumber(self), `Failed to perform \`:raw_add()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: RawComplexNumber
+	
+	local real, complex = 0, 0
 	
 	for idx, complex_num in ipairs({...}) do
 		local isnum, israwcomplex = isNumber(complex_num::number), isRawComplexNumber(complex_num::RawComplexNumber)
