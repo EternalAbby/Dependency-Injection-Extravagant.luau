@@ -42,11 +42,7 @@ local function isRawComplexNumber(candidate: RawComplexNumber): boolean
 		return false
 	end
 	
-	if not isNumber(candidate.real) then
-		return false
-	end
-	
-	if not isNumber(candidate.complex) then
+	if not isNumber(candidate.real) or not isNumber(candidate.complex) then
 		return false
 	end
 	
@@ -62,11 +58,7 @@ local function isComplexNumber(candidate: ComplexNumber): boolean
 		return false
 	end
 	
-	if not isNumber(candidate.real) then
-		return false
-	end
-	
-	if not isNumber(candidate.complex) then
+	if not isNumber(candidate.real) or not isNumber(candidate.complex) then
 		return false
 	end
 	
@@ -75,10 +67,6 @@ end
 
 local function GetNumberComponentTypes(candidate: ComplexNumber | number): (boolean, boolean)
 	return isNumber(candidate::number), isComplexNumber(candidate::ComplexNumber)
-end
-
-local function GNCT(candidate: AnyNumber): (boolean, boolean, boolean)
-	return isNumber(candidate::number), isRawComplexNumber(candidate::RawComplexNumber), isComplexNumber(candidate::ComplexNumber)
 end
 
 -- Computes the complex addition of `a` and `b` and returns the resulting real and complex components.
@@ -304,135 +292,147 @@ end
 -- ** RAW METHODS - BASIC ARITHMETIC OPERATION ** --
 
 -- RawMethod: Modify the components of `self` into its additive inverse.
-module.raw_unm = function(self: RawComplexNumber): boolean
-	assert(isRawComplexNumber(self), `Failed to perform \`:raw_unm()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
+module.raw_unm = function(self: ObjectOnly): boolean
+	assert(isRawComplexNumber(self), `Failed to perform \`:raw_unm()\` raw method. Expected <ObjectOnly> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
-	self = self :: RawComplexNumber
-	
+	self = self :: ObjectOnly
 	self.real = -self.real
 	self.complex = -self.complex
-	
 	return true
 end
 
 -- RawMethod: Modify the components of `self` by performing complex addition to it for each operand.
-module.raw_add = function(self: RawComplexNumber, ...: RawComplexNumber | number): boolean
-	assert(isRawComplexNumber(self), `Failed to perform \`:raw_add()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
+module.raw_add = function(self: ObjectOnly, ...: AnyNumber): boolean
+	assert(isRawComplexNumber(self), `Failed to perform \`:raw_add()\` raw method. Expected <ObjectOnly> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
-	self = self :: RawComplexNumber
+	self = self :: ObjectOnly
 	
 	local real, complex = 0, 0
-	
 	for idx, complex_num in ipairs({...}) do
-		local isnum, israwcomplex = isNumber(complex_num::number), isRawComplexNumber(complex_num::RawComplexNumber)
-		
-		assert(isnum or israwcomplex, `Failed to perform \`:raw_add()\` raw method. Expected <number> primitive type or <RawComplexNumber> type for <...> (arg #{idx + 1}), got <{typeof(self)}>.`)
+		local isnum, isobj = isNumber(complex_num::number), isRawComplexNumber(complex_num::ObjectOnly)
 		
 		if isnum then
 			complex_num = complex_num :: number
+			real, complex = Complex_Addition(real, complex, complex_num, 0)
 			
-			self.real += complex_num
+		elseif isobj then
+			complex_num = complex_num :: ObjectOnly
+			real, complex = Complex_Addition(real, complex, complex_num.real, complex_num.complex)
 			
-		elseif israwcomplex then
-			complex_num = complex_num :: RawComplexNumber
+		else
+			error(`Failed to perform \`:raw_add()\` raw method. Expected <AnyNumber> type for <...> (arg #{idx + 1}), got <{typeof(self)}>.`)
+		end
+	end
+	
+	self.real += real
+	self.complex += complex
+	return true
+end
+
+-- RawMethod: Modify the components of `self` by performing complex subtraction to it for each operand.
+module.raw_sub = function(self: ObjectOnly, ...: AnyNumber): boolean
+	assert(isRawComplexNumber(self), `Failed to perform \`:raw_sub()\` raw method. Expected <ObjectOnly> type for <self> (arg #1), got <{typeof(self)}>.`)
+	
+	self = self :: ObjectOnly
+	
+	local real, complex = 0, 0
+	for idx, complex_num in ipairs({...}) do
+		local isnum, isobj = isNumber(complex_num::number), isRawComplexNumber(complex_num::ObjectOnly)
+		
+		if isnum then
+			complex_num = complex_num :: number
+			real, complex = Complex_Subtraction(real, complex, complex_num, 0)
 			
-			self.real += complex_num.real
-			self.complex += complex_num.complex
+		elseif isobj then
+			complex_num = complex_num :: ObjectOnly
+			real, complex = Complex_Subtraction(real, complex, complex_num.real, complex_num.complex)
+			
+		else
+			error(`Failed to perform \`:raw_sub()\` raw method. Expected <AnyNumber> type for <...> (arg #{idx + 1}), got <{typeof(self)}>.`)
 		end
 	end
 	
 	return true
 end
 
--- RawMethod: Modify the components of `self` by performing complex subtraction to it for each operand.
-module.raw_sub = function(self: RawComplexNumber, ...: RawComplexNumber): nil
-	assert(isRawComplexNumber(self), `Failed to perform \`:raw_sub()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
-	
-	self = self :: RawComplexNumber
-	
-	for idx, complex_num in ipairs({...}) do
-		assert(isRawComplexNumber(complex_num), `Failed to perform \`:raw_sub()\` raw method. Expected <RawComplexNumber> type for <...> (arg #{idx + 1}), got <{typeof(self)}>.`)
-		
-		complex_num = complex_num :: RawComplexNumber
-		
-		self.real -= complex_num.real
-		self.complex -= complex_num.complex
-	end
-	
-	return nil
-end
-
 -- RawMethod: Modify the components of `self` by performing complex multiplication to it for each operand.
-module.raw_mul = function(self: RawComplexNumber, ...: RawComplexNumber): nil
-	assert(isRawComplexNumber(self), `Failed to perform \`:raw_mul()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
+module.raw_mul = function(self: ObjectOnly, ...: AnyNumber): boolean
+	assert(isRawComplexNumber(self), `Failed to perform \`:raw_mul()\` raw method. Expected <ObjectOnly> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
-	self = self :: RawComplexNumber
+	self = self :: ObjectOnly
 	
+	local real, complex = 0, 0
 	for idx, complex_num in ipairs({...}) do
-		assert(isRawComplexNumber(complex_num), `Failed to perform \`:raw_mul()\` raw method. Expected <RawComplexNumber> type for <...> (arg #{idx + 1}), got <{typeof(self)}>.`)
+		local isnum, isobj = isNumber(complex_num::number), isRawComplexNumber(complex_num::ObjectOnly)
 		
-		complex_num = complex_num :: RawComplexNumber
-		
-		local real = self.real * complex_num.real - self.complex * complex_num.complex
-		local complex = self.real * complex_num.complex + self.complex * complex_num.real
-		
-		self.real = real
-		self.complex = complex
+		if isnum then
+			complex_num = complex_num :: number
+			real, complex = Complex_Multiplication(real, complex, complex_num, 0)
+			
+		elseif isobj then
+			complex_num = complex_num :: ObjectOnly
+			real, complex = Complex_Multiplication(real, complex, complex_num.real, complex_num.complex)
+			
+		else
+			error(`Failed to perform \`:raw_mul()\` raw method. Expected <AnyNumber> type for <...> (arg #{idx + 1}), got <{typeof(self)}>.`)
+		end
 	end
 	
-	return nil
+	return true
 end
 
 -- RawMethod: Modify the components of `self` by performing complex division to it for each operand.
-module.raw_div = function(self: RawComplexNumber, ...: RawComplexNumber): nil
-	assert(isRawComplexNumber(self), `Failed to perform \`:raw_div()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
+module.raw_div = function(self: ObjectOnly, ...: AnyNumber): boolean
+	assert(isRawComplexNumber(self), `Failed to perform \`:raw_div()\` raw method. Expected <ObjectOnly> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
-	self = self :: RawComplexNumber
+	self = self :: ObjectOnly
 	
+	local real, complex = 0, 0
 	for idx, complex_num in ipairs({...}) do
-		assert(isRawComplexNumber(complex_num), `Failed to perform \`:raw_div()\` raw method. Expected <RawComplexNumber> type for <...> (arg #{idx + 1}), got <{typeof(self)}>.`)
+		local isnum, isobj = isNumber(complex_num::number), isRawComplexNumber(complex_num::ObjectOnly)
 		
-		complex_num = complex_num :: RawComplexNumber
-		assert(complex_num.real ~= 0 and complex_num.complex ~= 0, `Attempted to perform division by zero. (arg #{idx + 1})`)
-		
-		local real_numerator = self.real * complex_num.real + self.complex * complex_num.complex
-		local complex_numerator = self.complex * complex_num.real - self.real * complex_num.complex
-		local denominator = complex_num.real^2 + complex_num.complex^2
-		
-		local real = real_numerator / denominator
-		local complex = complex_numerator / denominator
-		
-		self.real = real
-		self.complex = complex
+		if isnum then
+			complex_num = complex_num :: number
+			real, complex = Complex_Division(real, complex, complex_num, 0, `Failed to perform \`:raw_div()\` raw method. Attempted to perform division by zero. (arg #{idx + 1})`)
+			
+		elseif isobj then
+			complex_num = complex_num :: ObjectOnly
+			real, complex = Complex_Division(real, complex, complex_num.real, complex_num.complex, `Failed to perform \`:raw_div()\` raw method. Attempted to perform division by zero. (arg #{idx + 1})`)
+			
+		else
+			error(`Failed to perform \`:raw_div()\` raw method. Expected <AnyNumber> type for <...> (arg #{idx + 1}), got <{typeof(self)}>.`)
+		end
 	end
 	
-	return nil
+	return true
 end
 
 -- RawMethod: Modify the components of `self` by performing complex int division to it for each operand.
-module.raw_idiv = function(self: RawComplexNumber, ...: RawComplexNumber): nil
-	assert(isRawComplexNumber(self), `Failed to perform \`:raw_idiv()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
+module.raw_idiv = function(self: ObjectOnly, ...: AnyNumber): boolean
+	assert(isRawComplexNumber(self), `Failed to perform \`:raw_idiv()\` raw method. Expected <ObjectOnly> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
-	self = self :: RawComplexNumber
+	self = self :: ObjectOnly
 	
+	local real, complex = 0, 0
 	for idx, complex_num in ipairs({...}) do
-		assert(isRawComplexNumber(complex_num), `Failed to perform \`:raw_idiv()\` raw method. Expected <RawComplexNumber> type for <...> (arg #{idx + 1}), got <{typeof(self)}>.`)
+		local isnum, isobj = isNumber(complex_num::number), isRawComplexNumber(complex_num::ObjectOnly)
 		
-		complex_num = complex_num :: RawComplexNumber
-		assert(complex_num.real ~= 0 and complex_num.complex ~= 0, "Attempted to perform division by zero.")
+		if isnum then
+			complex_num = complex_num :: number
+			real, complex = Complex_Division(real, complex, complex_num, 0, `Failed to perform \`:raw_idiv()\` raw method. Attempted to perform division by zero. (arg #{idx + 1})`)
+			
+		elseif isobj then
+			complex_num = complex_num :: ObjectOnly
+			real, complex = Complex_Division(real, complex, complex_num.real, complex_num.complex, `Failed to perform \`:raw_idiv()\` raw method. Attempted to perform division by zero. (arg #{idx + 1})`)
+			
+		else
+			error(`Failed to perform \`:raw_idiv()\` raw method. Expected <AnyNumber> type for <...> (arg #{idx + 1}), got <{typeof(self)}>.`)
+		end
 		
-		local real_numerator = self.real * complex_num.real + self.complex * complex_num.complex
-		local complex_numerator = self.complex * complex_num.real - self.real * complex_num.complex
-		local denominator = complex_num.real^2 + complex_num.complex^2
-		
-		local real = real_numerator / denominator
-		local complex = complex_numerator / denominator
-		
-		self.real = math.floor(real)
-		self.complex = math.floor(complex)
+		real, complex = math.floor(real), math.floor(complex)
 	end
 	
-	return nil
+	return true
 end
 
 -- RawMethod: Throws an error.
@@ -441,64 +441,29 @@ module.raw_mod = function(): nil
 end
 
 -- RawMethod: Modify the components of `self` by performing complex exponentiation to it for each operand.
-module.raw_pow = function(self: RawComplexNumber, ...: RawComplexNumber): nil
-	assert(isRawComplexNumber(self), `Failed to perform \`:raw_pow()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
+module.raw_pow = function(self: ObjectOnly, ...: AnyNumber): boolean
+	assert(isRawComplexNumber(self), `Failed to perform \`:raw_pow()\` raw method. Expected <ObjectOnly> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
-	self = self :: RawComplexNumber
+	self = self :: ObjectOnly
 	
+	local real, complex = 0, 0
 	for idx, complex_num in ipairs({...}) do
-		assert(isRawComplexNumber(complex_num), `Failed to perform \`:raw_pow()\` raw method. Expected <RawComplexNumber> type for <...> (arg #{idx + 1}), got <{typeof(self)}>.`)
+		local isnum, isobj = isNumber(complex_num::number), isRawComplexNumber(complex_num::ObjectOnly)
 		
-		complex_num = complex_num :: RawComplexNumber
-		
-		-- edge case: 0 ^ complex
-		if self.real == 0 and self.complex == 0 then
+		if isnum then
+			complex_num = complex_num :: number
+			real, complex = Complex_Exponentiation(real, complex, complex_num, 0, `Failed to perform \`:raw_pow()\` raw method. Attempted to perform division by zero. (arg #{idx + 1})`, `Failed to perform \`:raw_pow()\` raw method. Undefined limit behavior for purely imaginary exponent. (arg #{idx + 1})`)
 			
-			-- case: 0 ^ 0
-			if complex_num.real == 0 and complex_num.complex == 0 then
-				self.real = 1
-				self.complex = 0
-				
-			-- case: 0 ^ (purely-complex)
-			elseif complex_num.real == 0 and complex_num.complex ~= 0 then
-				error(`Undefined limit behavior for purely imaginary exponent.`)
-				
-			-- case: 0 ^ +real
-			elseif complex_num.real > 0 then
-				self.real = 0
-				self.complex = 0
-				
-			-- case: 0 ^ -real
-			elseif complex_num.real < 0 then
-				error(`Attempted to perform division by zero.`)
-			end
+		elseif isobj then
+			complex_num = complex_num :: ObjectOnly
+			real, complex = Complex_Exponentiation(real, complex, complex_num.real, complex_num.complex, `Failed to perform \`:raw_pow()\` raw method. Attempted to perform division by zero. (arg #{idx + 1})`, `Failed to perform \`:raw_pow()\` raw method. Undefined limit behavior for purely imaginary exponent. (arg #{idx + 1})`)
 			
-		-- simple case: complex ^ 0
-		elseif complex_num.real == 0 and complex_num.complex == 0 then
-			self.real = 1
-			self.complex = 0
-			
-		-- simple case: real ^ real
-		elseif self.complex == 0 and complex_num.complex == 0 then
-			self.real = self.real ^ complex_num.real
-			
+		else
+			error(`Failed to perform \`:raw_pow()\` raw method. Expected <AnyNumber> type for <...> (arg #{idx + 1}), got <{typeof(self)}>.`)
 		end
-		
-		-- main case: complex ^ complex
-		local base_magnitude_squared = self.real^2 + self.complex^2
-		local base_argument = math.atan2(self.complex, self.real)
-		
-		local term_1 = base_magnitude_squared ^ (complex_num.real / 2)
-		local term_2 = math.exp(-complex_num.complex * base_argument)
-		local term_3 = module.cis(complex_num.real * base_argument + complex_num.complex * math.log(base_magnitude_squared) / 2)
-		
-		local res = term_1 * term_2 * term_3
-		
-		self.real = res.real
-		self.complex = res.complex
 	end
 	
-	return nil
+	return true
 end
 
 
