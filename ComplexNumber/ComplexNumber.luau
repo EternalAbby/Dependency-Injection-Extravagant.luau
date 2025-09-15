@@ -69,49 +69,58 @@ local function GetNumberComponentTypes(candidate: ComplexNumber | number): (bool
 	return isNumber(candidate::number), isComplexNumber(candidate::ComplexNumber)
 end
 
+local function ThrowTypeError(func_name: string, func_type: string, expected_type: string, arg_name: string, arg_idx: number, received_val: any): nil
+	error(`----------\n\
+	Error: Failed to perform \`{func_name}\` {func_type}.\n\
+	Reason: A type error occurred when running the function.\n\
+	Expected: <{expected_type}> type for \`{arg_name}\` (arg #{arg_idx}).\n\
+	Cause: Received <{typeof(received_val)}> type.\n\
+	----------`
+)
+end
+
+local function ThrowOperationError(func_name: string, func_type: string, reason: string, expected: string, arg_name: string, arg_idx: number, cause: string): nil
+	error(`----------\n\
+	Error: Failed to perform \`{func_name}\` {func_type}.\n\
+	Reason: {reason}.\n\
+	Expected: {expected} for \`{arg_name}\` (arg #{arg_idx})\n\
+	Cause: {cause}.\n\
+	----------`
+)
+end
+
 -- Computes the complex addition of `a` and `b` and returns the resulting real and complex components.
 local function Complex_Addition(a_real: number, a_complex: number, b_real: number, b_complex: number): (number, number)
-	local real, complex = 0, 0
-	real = a_real + b_real
-	complex = a_complex + b_complex
-	return real, complex
+	return a_real + b_real,
+		a_complex + b_complex
 end
 
 -- Computes the complex subtraction of `a` and `b` and returns the resulting real and complex components.
 local function Complex_Subtraction(a_real: number, a_complex: number, b_real: number, b_complex: number): (number, number)
-	local real, complex = 0, 0
-	real = a_real - b_real
-	complex = a_complex - b_complex
-	return real, complex
+	return a_real - b_real,
+		a_complex - b_complex
 end
 
 -- Computes the complex multiplication of `a` and `b` and returns the resulting real and complex components.
 local function Complex_Multiplication(a_real: number, a_complex: number, b_real: number, b_complex: number): (number, number)
-	local real, complex = 0, 0
-	real = a_real * b_real - a_complex * b_complex
-	complex = a_real * b_complex + a_complex * b_real
-	return real, complex
+	return a_real * b_real - a_complex * b_complex,
+		a_real * b_complex + a_complex * b_real
 end
 
 -- Computes the complex division of `a` and `b` and returns the resulting real and complex components.
 local function Complex_Division(a_real: number, a_complex: number, b_real: number, b_complex: number, err_msg_div0: string): (number, number)
 	assert(b_real ~= 0 and b_complex ~= 0, err_msg_div0)
 	
-	local real, complex = 0, 0
-	
 	local real_numerator = a_real * b_real + a_complex * b_complex
 	local complex_numerator = a_complex * b_real - a_real * b_complex
 	local denominator = b_real ^ 2 + b_complex ^ 2
 	
-	real = real_numerator / denominator
-	complex = complex_numerator / denominator
-	return real, complex
+	return real_numerator / denominator,
+		complex_numerator / denominator
 end
 
 -- Computes the complex exponentiation of `a` and `b` and returns the resulting real and complex components.
 local function Complex_Exponentiation(a_real: number, a_complex: number, b_real: number, b_complex: number, err_msg_div0: string, err_msg_0_pow_cmplx: string): (number, number)
-	local real, complex = 0, 0
-	
 	-- Simple case: complex ^ 0
 	if b_real == 0 and b_complex == 0 then
 		return 1, 0
@@ -150,10 +159,8 @@ local function Complex_Exponentiation(a_real: number, a_complex: number, b_real:
 	local term_3_real = math.cos(term_3_arg)
 	local term_3_complex = math.sin(term_3_arg)
 	
-	real = term_12 * term_3_real
-	complex = term_12 * term_3_complex
-	
-	return real, complex
+	return term_12 * term_3_real,
+		term_12 * term_3_complex
 end
 
 
@@ -672,34 +679,36 @@ module.__unm = function(self: ComplexNumber): ComplexNumber
 	assert(isComplexNumber(self), `Failed to perform \`__unm()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <a> (arg #1), got <{typeof(self)}>.`)
 	
 	self = self :: ComplexNumber
-	
 	self.real = -self.real
 	self.complex = -self.complex
-	
 	return self
 end
 
-module.__add = function(a: ComplexNumber | number, b: ComplexNumber | number): ComplexNumber
-	local isnum_A, iscomplex_A = GetNumberComponentTypes(a)
-	local isnum_B, iscomplex_B = GetNumberComponentTypes(b)
+module.__add = function(a: AnyNumber, b: AnyNumber): ComplexNumber
+	local isnum_a, isobj_a = isNumber(a::number), isRawComplexNumber(a::ObjectOnly)
+	local isnum_b, isobj_b = isNumber(b::number), isRawComplexNumber(b::ObjectOnly)
 	
-	assert(isnum_A or iscomplex_A, `Failed to perform \`__add()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <a> (arg #1), got <{typeof(a)}>.`)
-	assert(isnum_B or iscomplex_B, `Failed to perform \`__add()\` metamethod. Expected <ComplexNumber> type, or <number> primitive type for <b> (arg #2), got <{typeof(b)}>.`)
+	assert(isnum_a or isobj_a, `Failed to perform \`__add()\` metamethod. Expected <AnyNumber> type for <a> (arg #1), got <{typeof(a)}>.`)
+	assert(isnum_b or isobj_b, `Failed to perform \`__add()\` metamethod. Expected <AnyNumber> type for <b> (arg #2), got <{typeof(b)}>.`)
 	
-	if isnum_A then
-		a = module.newRaw(a::number, 0) :: ComplexNumber
-	elseif isnum_B then
-		b = module.newRaw(b::number, 0) :: ComplexNumber
+	if isnum_a or isnum_b then
+		if isnum_a then
+			a, b = b, a
+		end
+		
+		a = a :: ComplexNumber
+		b = b :: number
+		
+		local real, complex = Complex_Addition(a.real, a.complex, b, 0)
+		return module.new(real, complex)
+		
+	else
+		a = a :: ObjectOnly
+		b = b :: ObjectOnly
+		
+		local real, complex = Complex_Addition(a.real, a.complex, b.real, b.complex)
+		return module.new(real, complex)
 	end
-	
-	a = a :: ComplexNumber
-	b = b :: ComplexNumber
-	
-	local real = a.real + b.real
-	local complex = a.complex + b.complex
-	
-	local new = module.new(real, complex)
-	return new
 end
 
 module.__sub = function(a: ComplexNumber | number, b: ComplexNumber | number): ComplexNumber
