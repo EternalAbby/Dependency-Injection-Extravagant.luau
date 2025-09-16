@@ -101,6 +101,9 @@ local function Matrix_GetComponentTypes(candidate: Matrix | number): (boolean, b
 	return TypeCheck.isNumber(candidate::number), isMatrix(candidate::Matrix)
 end
 
+local function StaticMatrix_GetComponentTypes(candidate: StaticMatrix | number): (boolean, boolean)
+	return TypeCheck.isNumber(candidate::number), isStaticMatrix(candidate::StaticMatrix)
+end
 
 -- ** CONSTRUCTORS ** --
 
@@ -397,8 +400,8 @@ static.__sub = function(a: StaticMatrix, b: StaticMatrix): StaticMatrix
 end
 
 static.__mul = function(a: StaticMatrix | number, b: StaticMatrix | number): StaticMatrix
-	local isnum_A, ismatrix_A = Matrix_GetComponentTypes(a)
-	local isnum_B, ismatrix_B = Matrix_GetComponentTypes(b)
+	local isnum_A, ismatrix_A = StaticMatrix_GetComponentTypes(a)
+	local isnum_B, ismatrix_B = StaticMatrix_GetComponentTypes(b)
 	
 	assert(isnum_A or ismatrix_A)
 	assert(isnum_B or ismatrix_B)

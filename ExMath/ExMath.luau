@@ -22,11 +22,9 @@ end
 
 module.fibonacci_sequence = function(n: number): number
 	local a, b = 0, 1
-	
 	for _ = 1, n do
 		a, b = b, a + b
 	end
-	
 	return a
 end
 
@@ -68,6 +66,10 @@ end
 
 module.percentage = function(count: number, total: number): number
 	return (count / total) * 100
+end
+
+module.ratio = function(numerator: number, denominator: number): number
+	return numerator / denominator
 end
 
 module.stirling_approximation = function(n: number): number

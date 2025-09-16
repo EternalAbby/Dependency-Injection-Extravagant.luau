@@ -2,18 +2,6 @@
 
 local module = {}
 
--- This type is taken from the ComplexNumber module.
-type RawComplexNumber = {
-	["real"]: number,
-	["complex"]: number
-}
-
--- This type is taken from the ComplexNumber module.
-type ComplexNumber = setmetatable<{
-	["real"]: number,
-	["complex"]: number
-}, {__metatable: "ComplexNumber"}>
-
 module.isString = function(candidate: string): boolean
 	if typeof(candidate) ~= "string" then
 		return false
