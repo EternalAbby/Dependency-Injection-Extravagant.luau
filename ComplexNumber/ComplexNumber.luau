@@ -25,49 +25,49 @@ type ObjectOnly = ComplexNumber | RawComplexNumber
 -- ** INTERNAL FUNCTIONS ** --
 
 -- This function is from the TypeCheck module.
-local function isNumber(candidate: number): boolean
+local function isNumber(candidate: number): (boolean, "" | "number")
 	if typeof(candidate) ~= "number" then
-		return false
+		return false, ""
 	end
 	
 	if candidate ~= candidate or math.abs(candidate) == math.huge then
-		return false
+		return false, ""
 	end
 	
-	return true
+	return true, "number"
 end
 
-local function isRawComplexNumber(candidate: RawComplexNumber): boolean
+local function isRawComplexNumber(candidate: RawComplexNumber): (boolean, "" | "RawComplexNumber")
 	if typeof(candidate) ~= "table" then
-		return false
+		return false, ""
 	end
 	
 	if not isNumber(candidate.real) or not isNumber(candidate.complex) then
-		return false
+		return false, ""
 	end
 	
-	return true
+	return true, "RawComplexNumber"
 end
 
-local function isComplexNumber(candidate: ComplexNumber): boolean
+local function isComplexNumber(candidate: ComplexNumber): (boolean, "" | "ComplexNumber")
 	if typeof(candidate) ~= "table" then
-		return false
+		return false, ""
 	end
 	
 	if getmetatable(candidate)::string ~= "ComplexNumber" then
-		return false
+		return false, ""
 	end
 	
 	if not isNumber(candidate.real) or not isNumber(candidate.complex) then
-		return false
+		return false, ""
 	end
 	
-	return true
+	return true, "ComplexNumber"
 end
 
-local function ThrowTypeError(func_name: string, func_type: string, expected_type: string, arg_name: string, arg_idx: number, arg_val: any): nil
+local function ThrowTypeError(expected_type: string, arg_name: string, arg_idx: number, arg_val: any): nil
 	error(`--------------------\n\
-	Error: Failed to perform \`{func_name}\` {func_type}.\n\
+	Error: Failed to perform \`{debug.info(4, "n")}\`.\n\
 	Reason: A type error occurred when running the function.\n\
 	Expected: <{expected_type}> type for \`{arg_name}\` (arg #{arg_idx}).\n\
 	Cause: Received <{typeof(arg_val)}> type.\n\
@@ -75,9 +75,9 @@ local function ThrowTypeError(func_name: string, func_type: string, expected_typ
 )
 end
 
-local function ThrowDivisionBy0Error(func_name: string, func_type: string, arg_name: string, arg_idx: number): nil
+local function ThrowDivisionBy0Error(arg_name: string, arg_idx: number): nil
 	error(`--------------------\n\
-	Error: Failed to perform \`{func_name}\` {func_type}.\n\
+	Error: Failed to perform \`{debug.info(4, "n")}\`.\n\
 	Reason: Attempted to perform division by 0.\n\
 	Expected: Non-zero complex number for \`{arg_name}\` (arg #{arg_idx}).\n\
 	Cause: Argument is equal to 0.\n\
@@ -85,9 +85,9 @@ local function ThrowDivisionBy0Error(func_name: string, func_type: string, arg_n
 )
 end
 
-local function ThrowUndefinedLimitError(func_name: string, func_type: string, arg_name: string, arg_idx: number)
+local function ThrowUndefinedLimitError(arg_name: string, arg_idx: number): nil
 	error(`--------------------\n\
-	Error: Failed to perform \`{func_name}\` {func_type}.\n\
+	Error: Failed to perform \`{debug.info(4, "n")}\`.\n\
 	Reason: Undefined limit for purely imaginary exponent.\n\
 	Expected: Non-purely imaginary complex number for \`{arg_name}\` (arg #{arg_idx}).\n\
 	Cause: Argument only has complex component.\n\
@@ -95,80 +95,292 @@ local function ThrowUndefinedLimitError(func_name: string, func_type: string, ar
 )
 end
 
--- Computes the complex addition of `a` and `b` and returns the resulting real and complex components.
-local function Complex_Addition(a_real: number, a_complex: number, b_real: number, b_complex: number): (number, number)
-	return a_real + b_real,
-		a_complex + b_complex
-end
-
--- Computes the complex subtraction of `a` and `b` and returns the resulting real and complex components.
-local function Complex_Subtraction(a_real: number, a_complex: number, b_real: number, b_complex: number): (number, number)
-	return a_real - b_real,
-		a_complex - b_complex
-end
-
--- Computes the complex multiplication of `a` and `b` and returns the resulting real and complex components.
-local function Complex_Multiplication(a_real: number, a_complex: number, b_real: number, b_complex: number): (number, number)
-	return a_real * b_real - a_complex * b_complex,
-		a_real * b_complex + a_complex * b_real
-end
-
--- Computes the complex division of `a` and `b` and returns the resulting real and complex components.
-local function Complex_Division(a_real: number, a_complex: number, b_real: number, b_complex: number): (number, number)
-	--assert(b_real ~= 0 and b_complex ~= 0, "error division by 0")
+local function AnalyzeType<T>(candidate: T, expected_type: string, arg_name: string, arg_idx: number, ...: (T) -> (boolean, string)): "number" | "RawComplexNumber" | "ComplexNumber"
+	local checks = {...}
+	local typ = ""
+	local flag = false
 	
-	local real_numerator = a_real * b_real + a_complex * b_complex
-	local complex_numerator = a_complex * b_real - a_real * b_complex
-	local denominator = b_real ^ 2 + b_complex ^ 2
-	
-	return real_numerator / denominator,
-		complex_numerator / denominator
-end
-
--- Computes the complex exponentiation of `a` and `b` and returns the resulting real and complex components.
-local function Complex_Exponentiation(a_real: number, a_complex: number, b_real: number, b_complex: number): (number, number)
-	-- Simple case: complex ^ 0
-	if b_real == 0 and b_complex == 0 then
-		return 1, 0
-	end
-	
-	-- Simple case: 0 ^ number
-	if a_real == 0 and a_complex == 0 then
+	for _, check in checks do
+		flag, typ = check(candidate)
 		
-		-- Case: 0 ^ (purely-complex)
-		-- if b_real == 0 and b_complex ~= 0 then
-		-- 	error("error purely complex")
-		-- end
-		-- Case: 0 ^ +real
-		if b_real > 0 then
-			return 0, 0
+		if flag then
+			break
 		end
-		-- Case: 0 ^ -real
-		-- if b_real < 0 then
-		-- 	error("error negative real")
-		-- end
-		
-	-- Simple case: real ^ real
-	elseif a_complex == 0 and b_complex then
-		return a_real ^ b_real, 0
 	end
 	
-	-- Main case: complex ^ complex
-	local base_dot_product = a_real ^ 2 + a_complex ^ 2
-	local base_argument = math.atan2(a_complex, a_real)
+	if not flag then
+		ThrowTypeError(expected_type, arg_name, arg_idx, candidate)
+	end
 	
-	local term_1 = base_dot_product ^ (b_real / 2)
-	local term_2 = math.exp(-b_complex * base_argument)
-	local term_12 = term_1 * term_2
-	
-	local term_3_arg = b_real * base_argument + b_complex * math.log(base_dot_product) / 2
-	local term_3_real = math.cos(term_3_arg)
-	local term_3_complex = math.sin(term_3_arg)
-	
-	return term_12 * term_3_real,
-		term_12 * term_3_complex
+	return typ :: any
 end
 
+local function Check(expression: boolean, err_func: (...any) -> nil, ...: string | number): nil
+	if not expression then
+		err_func(...)
+	end
+	return nil
+end
+
+local function Complex_Addition(a: AnyNumber, b: AnyNumber, known_type_a: string): (number, number, string, string)
+	local type_a = if known_type_a then known_type_a else AnalyzeType(a, "AnyNumber", "a", 1, isNumber, isRawComplexNumber)
+	local type_b = AnalyzeType(b, "AnyNumber", "b", 2, isNumber, isRawComplexNumber)
+	
+	local real, complex = 0, 0
+	if type_a == "RawComplexNumber" and type_b == "RawComplexNumber" then
+		a = a :: ObjectOnly
+		b = b :: ObjectOnly
+		real = a.real + b.real
+		complex = a.complex + b.complex
+		
+	elseif type_a == "RawComplexNumber" and type_b == "number" then
+		a = a :: ObjectOnly
+		b = b :: number
+		real = a.real + b
+		complex = a.complex + b
+		
+	elseif type_a == "number" and type_b == "RawComplexNumber" then
+		a = a :: number
+		b = b :: ObjectOnly
+		real = a + b.real
+		complex = a + b.complex
+	end
+	
+	return real, complex, type_a, type_b
+end
+
+local function Complex_Subtraction(a: AnyNumber, b: AnyNumber, known_type_a: string): (number, number, string, string)
+	local type_a = if known_type_a then known_type_a else AnalyzeType(a, "AnyNumber", "a", 1, isNumber, isRawComplexNumber)
+	local type_b = AnalyzeType(b, "AnyNumber", "b", 2, isNumber, isRawComplexNumber)
+	
+	local real, complex = 0, 0
+	if type_a == "RawComplexNumber" and type_b == "RawComplexNumber" then
+		a = a :: ObjectOnly
+		b = b :: ObjectOnly
+		real = a.real - b.real
+		complex = a.complex - b.complex
+		
+	elseif type_a == "RawComplexNumber" and type_b == "number" then
+		a = a :: ObjectOnly
+		b = b :: number
+		real = a.real - b
+		complex = a.complex - b
+		
+	elseif type_a == "number" and type_b == "RawComplexNumber" then
+		a = a :: number
+		b = b :: ObjectOnly
+		real = a - b.real
+		complex = a - b.complex
+	end
+	
+	return real, complex, type_a, type_b
+end
+
+local function Complex_Multiplication(a: AnyNumber, b: AnyNumber, known_type_a: string): (number, number, string, string)
+	local type_a = if known_type_a then known_type_a else AnalyzeType(a, "AnyNumber", "a", 1, isNumber, isRawComplexNumber)
+	local type_b = AnalyzeType(b, "AnyNumber", "b", 2, isNumber, isRawComplexNumber)
+	
+	local real, complex = 0, 0
+	if type_a == "RawComplexNumber" and type_b == "RawComplexNumber" then
+		a = a :: ObjectOnly
+		b = b :: ObjectOnly
+		real = a.real * b.real - a.complex * b.complex
+		complex = a.real * b.complex + a.complex * b.real
+		
+	elseif type_a == "RawComplexNumber" and type_b == "number" then
+		a = a :: ObjectOnly
+		b = b :: number
+		real = a.real - b
+		complex = a.complex - b
+		
+	elseif type_a == "number" and type_b == "RawComplexNumber" then
+		a = a :: number
+		b = b :: ObjectOnly
+		real = a - b.real
+		complex = a - b.complex
+	end
+	
+	return real, complex, type_a, type_b
+end
+
+local function Complex_Division(a: AnyNumber, b: AnyNumber, known_type_a: string, idx_b: number): (number, number, string, string)
+	local type_a = if known_type_a then known_type_a else AnalyzeType(a, "AnyNumber", "a", 1, isNumber, isRawComplexNumber)
+	local type_b = AnalyzeType(b, "AnyNumber", "b", 2, isNumber, isRawComplexNumber)
+	
+	local real, complex = 0, 0
+	if type_a == "RawComplexNumber" and type_b == "RawComplexNumber" then
+		a = a :: ObjectOnly
+		b = b :: ObjectOnly
+		
+		Check(b.real == 0 and b.complex == 0, ThrowDivisionBy0Error, if idx_b == 2 then "b" else "...", idx_b)
+		
+		local real_numerator = a.real * b.real + a.complex * b.complex
+		local complex_numerator = a.complex * b.real - a.real * b.complex
+		local denominator = b.real ^ 2 + b.complex ^ 2
+		
+		real = real_numerator / denominator
+		complex = complex_numerator / denominator
+		
+	elseif type_a == "RawComplexNumber" and type_b == "number" then
+		a = a :: ObjectOnly
+		b = b :: number
+		
+		Check(b == 0, ThrowDivisionBy0Error, if idx_b == 2 then "b" else "...", idx_b)
+		
+		local real_numerator = a.real * b
+		local complex_numerator = a.complex * b
+		local denominator = b ^ 2
+		
+		real = real_numerator / denominator
+		complex = complex_numerator / denominator
+		
+	elseif type_a == "number" and type_b == "RawComplexNumber" then
+		a = a :: number
+		b = b :: ObjectOnly
+		
+		Check(b.real == 0 and b.complex == 0, ThrowDivisionBy0Error, if idx_b == 2 then "b" else "...", idx_b)
+		
+		local real_numerator = a * b.real
+		local complex_numerator = -a * b.complex
+		local denominator = b.real ^ 2 + b.complex ^ 2
+		
+		real = real_numerator / denominator
+		complex = complex_numerator / denominator
+	end
+	
+	return real, complex, type_a, type_b
+end
+
+local function Complex_Exponentiation(a: AnyNumber, b: AnyNumber, known_type_a: string, idx_b: number): (number, number, string, string)
+	local type_a = if known_type_a then known_type_a::("number" | "RawComplexNumber" | "ComplexNumber") else AnalyzeType(a, "AnyNumber", "a", 1, isNumber, isRawComplexNumber)
+	local type_b = AnalyzeType(b, "AnyNumber", "b", 2, isNumber, isRawComplexNumber)
+	
+	local real, complex = 0, 0
+	
+	if type_a == "RawComplexNumber" and type_b == "RawComplexNumber" then
+		a = a :: ObjectOnly
+		b = b :: ObjectOnly
+		
+		-- Simple case: complex ^ 0
+		if b.real == 0 and b.complex == 0 then
+			real, complex = 1, 0
+			
+		-- Simple case: 0 ^ number
+		elseif a.real == 0 and a.complex == 0 then
+			
+			-- Case: 0 ^ (purely-complex)
+			Check(b.real == 0 and b.complex ~= 0, ThrowUndefinedLimitError, "b", idx_b)
+			
+			-- Case: 0 ^ -real
+			Check(b.real < 0, ThrowUndefinedLimitError, "b", idx_b)
+			
+			-- Case: 0 ^ +real
+			if b.real > 0 then
+				real, complex = 0, 0
+			end
+			
+		-- Simple case: real ^ real
+		elseif a.complex == 0 and b.complex == 0 then
+			real, complex = a.real ^ b.real, 0
+			
+		-- Main case: complex ^ complex
+		else
+			local base_dot_product = a.real ^ 2 + a.complex ^ 2
+			local base_argument = math.atan2(a.complex, a.real)
+			
+			local term_1 = base_dot_product ^ (b.real / 2)
+			local term_2 = math.exp(-b.complex * base_argument)
+			local term_12 = term_1 * term_2
+			
+			local term_3_arg = b.real * base_argument + b.complex * math.log(base_dot_product) / 2
+			local term_3_real = math.cos(term_3_arg)
+			local term_3_complex = math.sin(term_3_arg)
+			
+			real = term_12 * term_3_real
+			complex = term_12 * term_3_complex
+		end
+		
+	elseif type_a == "RawComplexNumber" and type_b == "number" then
+		a = a :: ObjectOnly
+		b = b :: number
+		
+		-- Simple case: complex ^ 0
+		if b == 0 then
+			real, complex = 1, 0
+			
+		-- Simple case: 0 ^ number
+		elseif a.real == 0 and a.complex == 0 then
+			
+			-- Case: 0 ^ -real
+			Check(b < 0, ThrowDivisionBy0Error, "b", idx_b)
+			
+			-- Case: 0 ^ +real
+			if b > 0 then
+				real, complex = 0, 0
+			end
+			
+		-- Simple case: real ^ real
+		elseif a.complex == 0 then
+			real, complex = a.real ^ b, 0
+			
+		-- Main case: complex ^ complex
+		else
+			local base_dot_product = a.real ^ 2 + a.complex ^ 2
+			local base_argument = math.atan2(a.complex, a.real)
+			
+			local term_1 = base_dot_product ^ (b / 2)
+			
+			local term_3_arg = b * base_argument
+			local term_3_real = math.cos(term_3_arg)
+			local term_3_complex = math.sin(term_3_arg)
+			
+			real = term_1 * term_3_real
+			complex = term_1 * term_3_complex
+		end
+		
+	elseif type_a == "number" and type_b == "RawComplexNumber" then
+		a = a :: number
+		b = b :: ObjectOnly
+		
+		-- Simple case: complex ^ 0
+		if b.real == 0 and b.complex == 0 then
+			real, complex = 1, 0
+			
+		-- Simple case: 0 ^ number
+		elseif a == 0 then
+			
+			-- Case: 0 ^ (purely-complex)
+			Check(b.real == 0 and b.complex ~= 0, ThrowUndefinedLimitError, "b", idx_b)
+			
+			-- Case: 0 ^ -real
+			Check(b.real < 0, ThrowUndefinedLimitError, "b", idx_b)
+			
+			-- Case: 0 ^ +real
+			if b.real > 0 then
+				real, complex = 0, 0
+			end
+			
+		-- Simple case: real ^ real
+		elseif b.complex == 0 then
+			real, complex = a ^ b.real, 0
+			
+		-- Main case: complex ^ complex
+		else
+			local base_dot_product = a ^ 2
+			
+			local term_1 = base_dot_product ^ (b.real / 2)
+			
+			local term_3_arg = b.complex * math.log(base_dot_product) / 2
+			local term_3_real = math.cos(term_3_arg)
+			local term_3_complex = math.sin(term_3_arg)
+			
+			real = term_1 * term_3_real
+			complex = term_1 * term_3_complex
+		end
+	end
+	
+	return real, complex, type_a, type_b
+end
 
 -- ** CONSTRUCTORS ** --
 
@@ -196,8 +408,6 @@ module.new = function(real: number, complex: number): ComplexNumber
 	local new = module.newRaw(real, complex)
 	return setmetatable(new, module)
 end
-
-local complexUnit = module.new(0, 1)
 
 --[[
 Constructor: Creates a new `ComplexNumber` object that is equivalent to (1 + 0𝒊).
@@ -258,8 +468,8 @@ module.cis = function(theta: number): ComplexNumber
 	assert(isNumber(theta), `Failed to compute \`.cis()\` function. Expected <number> primitive type for <theta> (arg #1), got <{typeof(theta)}>.`)
 	
 	local cosine = math.cos(theta)
-	local sine = math.sin(theta) * complexUnit
-	return cosine + sine
+	local sine = math.sin(theta)
+	return module.new(cosine, sine)
 end
 
 
