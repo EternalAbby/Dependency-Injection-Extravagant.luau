@@ -3,11 +3,7 @@
 local module = {}
 
 module.isString = function(candidate: string): boolean
-	if typeof(candidate) ~= "string" then
-		return false
-	end
-	
-	return true
+	return typeof(candidate) == "string"
 end
 
 module.isNumber = function(candidate: number, allowSpecial: boolean?): boolean
@@ -37,11 +33,7 @@ module.isBoolean = function(candidate: boolean | nil, exclude_nil: boolean?): bo
 end
 
 module.isTable = function(candidate: {[any]: any}): boolean
-	if typeof(candidate) ~= "table" then
-		return false
-	end
-	
-	return true
+	return typeof(candidate) == "table"
 end
 
 module.isArray = function(candidate: {[number]: any}, ignore_PrerequisiteChecks: boolean?): boolean
