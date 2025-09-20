@@ -24,11 +24,7 @@ local storage: TimerStorage = {}
 
 -- This function is from the TypeCheck module.
 local function isString(candidate: string): boolean
-	if typeof(candidate) ~= "string" then
-		return false
-	end
-	
-	return true
+	return typeof(candidate) == "string"
 end
 
 -- This function is from the TypeCheck module.
@@ -113,7 +109,6 @@ module.Start = function(self: Timer): boolean
 	self._stopTime = start + self._duration
 	self._pauseTime = -1
 	self._isActive = true
-	
 	return true
 end
 
@@ -127,7 +122,6 @@ module.Resume = function(self: Timer): boolean
 	
 	self._stopTime += self._pauseTime - self._startTime
 	self._isActive = true
-	
 	return true
 end
 
@@ -143,7 +137,6 @@ module.Pause = function(self: Timer): boolean
 	
 	self._pauseTime = pause
 	self._isActive = false
-	
 	return true
 end
 
@@ -159,7 +152,6 @@ module.Stop = function(self: Timer): boolean
 	self._stopTime = -1
 	self._pauseTime = -1
 	self._isActive = false
-	
 	return true
 end
 
@@ -175,7 +167,6 @@ module.GetCurrentTime = function(self: Timer): number
 	if self._isActive then
 		return os.clock() - self._startTime
 	end
-	
 	return -1
 end
 
@@ -185,7 +176,6 @@ module.SetDuration = function(self: Timer, seconds: number): boolean
 	assert(isNumber(seconds))
 	
 	self._duration = seconds
-	
 	return true
 end
 
@@ -202,7 +192,6 @@ module.isEnded = function(self: Timer): boolean
 	if os.clock() >= self._stopTime then
 		self._isActive = false
 	end
-	
 	return not self._isActive
 end
 

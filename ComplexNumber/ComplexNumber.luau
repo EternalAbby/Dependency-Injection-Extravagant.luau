@@ -18,8 +18,8 @@ export type ComplexNumber = setmetatable<{
 }, typeof(module)>
 
 type AnyNumber = ComplexNumber | RawComplexNumber | number
-type ComplexOnly = ComplexNumber | number
-type RawComplexOnly = RawComplexNumber | number
+--type ComplexOnly = ComplexNumber | number
+--type RawComplexOnly = RawComplexNumber | number
 type ObjectOnly = ComplexNumber | RawComplexNumber
 
 -- ** INTERNAL FUNCTIONS ** --
@@ -600,7 +600,7 @@ module.raw_idiv = function(self: ObjectOnly, ...: AnyNumber): boolean
 	return true
 end
 
--- RawMethod: Throws an error.
+-- RawMethod: Currently, this raw method does not work. Attempting to call this raw method will throw an error.
 module.raw_mod = function(): nil
 	error("This is an invalid operation as of now.")
 end
