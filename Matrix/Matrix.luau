@@ -164,18 +164,24 @@ local function isDynamicMatrix(candidate: DynamicMatrix): boolean
 		return false
 	end
 	
-	-- TBA
+	-- TODO: Implement this check function.
+	-- Checks if _size exists and only includes numbers as elements (check this during looping through the _entries).
+	-- Checks if _entries exists:
+		-- Only includes numbers for the last layer.
+		-- Only includes tables of tables/numbers for other layers.
+	-- Checks if it correctly identified the last layer using the length of _size table.
+	
+	if typeof(candidate._size) ~= "table" then
+		return false
+	end
+	
+	if typeof(candidate._entries) ~= "table" then
+		return false
+	end
 	
 	return true
 end
 
-local function Matrix_GetComponentTypes(candidate: Matrix | number): (boolean, boolean)
-	return isNumber(candidate::number), isMatrix(candidate::Matrix)
-end
-
-local function StaticMatrix_GetComponentTypes(candidate: StaticMatrix | number): (boolean, boolean)
-	return isNumber(candidate::number), isStaticMatrix(candidate::StaticMatrix)
-end
 
 -- ** CONSTRUCTORS ** --
 
@@ -192,17 +198,12 @@ module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: n
 		assert(isNumber(m))
 		assert(isNumber(n))
 		
+		local new_row = table.create(n, fill)
+		local new_entries = table.create(m, new_row)
+		
 		local res = {}
-		res._entries = {}
+		res._entries = new_entries
 		res._size = {m, n}
-		
-		for i = 1, m do
-			res._entries[i] = {}
-			for j = 1, n do
-				res._entries[i][j] = fill
-			end
-		end
-		
 		return setmetatable(res, matrix) :: Matrix
 		
 	elseif name == "StaticMatrix" then
@@ -390,15 +391,17 @@ matrix.transpose = function(self: Matrix): Matrix
 	assert(isMatrix(self))
 	
 	local m, n = self._size[1], self._size[2]
-	local new = module.new("Matrix", 0, n, m)::Matrix
+	local new = {}
+	new._entries = table.create(m, {})
+	new._size = {n, m}
 	
 	for i = 1, m do
 		for j = 1, n do
-			new._entries[j][i] = self._entries[i][j]
+			new._entries[i][j] = self._entries[j][i]
 		end
 	end
 	
-	return new
+	return setmetatable(new, matrix)
 end
 
 
@@ -412,8 +415,8 @@ matrix.__add = function(a: Matrix, b: Matrix): Matrix
 	assert(isMatrix(a))
 	assert(isMatrix(b))
 	
-	local size_a = a:getsize()
-	local size_b = b:getsize()
+	local size_a = a._size
+	local size_b = b._size
 	
 	assert(#size_a == #size_b)
 	assert(size_a[1] == size_b[1])
@@ -440,8 +443,8 @@ matrix.__sub = function(a: Matrix, b: Matrix): Matrix
 end
 
 matrix.__mul = function(a: Matrix | number, b: Matrix | number): Matrix
-	local isnum_A, ismatrix_A = Matrix_GetComponentTypes(a)
-	local isnum_B, ismatrix_B = Matrix_GetComponentTypes(b)
+	local isnum_A, ismatrix_A = isNumber(a::number), isMatrix(a::Matrix)
+	local isnum_B, ismatrix_B = isNumber(b::number), isMatrix(b::Matrix)
 	
 	assert(isnum_A or ismatrix_A)
 	assert(isnum_B or ismatrix_B)
@@ -454,7 +457,7 @@ matrix.__mul = function(a: Matrix | number, b: Matrix | number): Matrix
 		a = a :: Matrix
 		b = b :: number
 		
-		local size_A = a:getsize()
+		local size_A = a._size
 		local m, n = size_A[1], size_A[2]
 		
 		local new = {}
@@ -474,8 +477,8 @@ matrix.__mul = function(a: Matrix | number, b: Matrix | number): Matrix
 		a = a :: Matrix
 		b = b :: Matrix
 		
-		local size_A = a:getsize()
-		local size_B = b:getsize()
+		local size_A = a._size
+		local size_B = b._size
 		
 		assert(#size_A == #size_B)
 		assert(size_A[2] == size_B[1])
@@ -538,7 +541,9 @@ static.transpose = function(self: StaticMatrix): StaticMatrix
 	assert(isStaticMatrix(self))
 	
 	local m, n = self._size[1], self._size[2]
-	local new = module.new("StaticMatrix", 0, n, m)::StaticMatrix
+	local new = {}
+	new._entries = table.create(m * n, 0)
+	new._size = {n, m}
 	
 	for i = 1, n do
 		for j = 1, m do
@@ -548,7 +553,7 @@ static.transpose = function(self: StaticMatrix): StaticMatrix
 		end
 	end
 	
-	return new
+	return setmetatable(new, static)
 end
 
 -- ** STATIC MATRIX - METATABLE ** --
@@ -561,8 +566,8 @@ static.__add = function(a: StaticMatrix, b: StaticMatrix): StaticMatrix
 	assert(isStaticMatrix(a))
 	assert(isStaticMatrix(b))
 	
-	local size_a = a:getsize()
-	local size_b = b:getsize()
+	local size_a = a._size
+	local size_b = b._size
 	
 	assert(#size_a == #size_b)
 	assert(size_a[1] == size_b[1])
@@ -586,8 +591,8 @@ static.__sub = function(a: StaticMatrix, b: StaticMatrix): StaticMatrix
 end
 
 static.__mul = function(a: StaticMatrix | number, b: StaticMatrix | number): StaticMatrix
-	local isnum_A, ismatrix_A = StaticMatrix_GetComponentTypes(a)
-	local isnum_B, ismatrix_B = StaticMatrix_GetComponentTypes(b)
+	local isnum_A, ismatrix_A = isNumber(a::number), isStaticMatrix(a::StaticMatrix)
+	local isnum_B, ismatrix_B = isNumber(b::number), isStaticMatrix(b::StaticMatrix)
 	
 	assert(isnum_A or ismatrix_A)
 	assert(isnum_B or ismatrix_B)
@@ -600,7 +605,7 @@ static.__mul = function(a: StaticMatrix | number, b: StaticMatrix | number): Sta
 		a = a :: StaticMatrix
 		b = b :: number
 		
-		local size_A = a:getsize()
+		local size_A = a._size
 		local m, n = size_A[1], size_A[2]
 		
 		local new = {}
@@ -617,8 +622,8 @@ static.__mul = function(a: StaticMatrix | number, b: StaticMatrix | number): Sta
 		a = a :: StaticMatrix
 		b = b :: StaticMatrix
 		
-		local size_A = a:getsize()
-		local size_B = b:getsize()
+		local size_A = a._size
+		local size_B = b._size
 		
 		assert(#size_A == #size_B)
 		assert(size_A[2] == size_B[1])
