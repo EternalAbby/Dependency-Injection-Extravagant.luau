@@ -97,7 +97,7 @@ local function ThrowUndefinedLimitError(arg_name: string, arg_idx: number): nil
 end
 
 -- Checks the type of candidate using provided check functions from <...>. These functions are the internal check functions. Returned strings are limited by available checks.
-local function AnalyzeType<T>(candidate: T, expected_type: string, arg_name: string, arg_idx: number, ...: (T) -> (boolean, string)): "number" | "RawComplexNumber" | "ComplexNumber"
+local function AnalyzeType(candidate: AnyNumber, expected_type: string, arg_name: string, arg_idx: number, ...: (...any) -> (boolean, string)): "number" | "RawComplexNumber" | "ComplexNumber"
 	local checks = {...}
 	local typ = ""
 	local flag = false
