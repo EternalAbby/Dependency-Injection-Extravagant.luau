@@ -392,10 +392,11 @@ matrix.transpose = function(self: Matrix): Matrix
 	
 	local m, n = self._size[1], self._size[2]
 	local new = {}
-	new._entries = table.create(m, {})
+	new._entries = {}
 	new._size = {n, m}
 	
 	for i = 1, m do
+		new._entries[i] = {}
 		for j = 1, n do
 			new._entries[i][j] = self._entries[j][i]
 		end
