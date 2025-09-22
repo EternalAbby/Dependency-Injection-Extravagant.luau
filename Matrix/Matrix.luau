@@ -164,13 +164,6 @@ local function isDynamicMatrix(candidate: DynamicMatrix): boolean
 		return false
 	end
 	
-	-- TODO: Implement this check function.
-	-- Checks if _size exists and only includes numbers as elements (check this during looping through the _entries).
-	-- Checks if _entries exists:
-		-- Only includes numbers for the last layer.
-		-- Only includes tables of tables/numbers for other layers.
-	-- Checks if it correctly identified the last layer using the length of _size table.
-	
 	if typeof(candidate._size) ~= "table" then
 		return false
 	end
@@ -179,7 +172,43 @@ local function isDynamicMatrix(candidate: DynamicMatrix): boolean
 		return false
 	end
 	
-	return true
+	local total_layer = #candidate._size
+	
+	-- TODO: test this function
+	local function helper(cur_arr: RepeatingEntry, cur_layer: number): boolean
+		if cur_layer == total_layer then
+			local axis_val = candidate._size[cur_layer]
+			local total_entry = 0
+			
+			for idx, entry in cur_arr do
+				if not isNumber(idx) or isNumber(entry::number) then
+					return false
+				end
+				
+				total_entry += 1
+			end
+			return axis_val == total_entry
+			
+		else
+			local axis_val = candidate._size[cur_layer]
+			local total_entry = 0
+			
+			for idx, entry in cur_arr do
+				if not isNumber(idx) or typeof(entry) ~= "table" then
+					return false
+				end
+				
+				if not helper(entry, cur_layer + 1) then
+					return false
+				end
+				
+				total_entry += 1
+			end
+			return axis_val == total_entry
+		end
+	end
+	
+	return helper(candidate._entries, 1)
 end
 
 
@@ -218,17 +247,21 @@ module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: n
 		return setmetatable(res, static) :: StaticMatrix
 		
 	elseif name == "DynamicMatrix" then
-		local entry: {} | number = fill
+		local res = {}
 		
-		for idx = #axes, 1, -1 do
-			assert(isNumber(axes[idx]))
-			entry = table.create(axes[idx], entry)
+		local function helper(cur_arr: {[number]: {} | number}, cur_idx: number): {} | number
+			if cur_idx == #axes then
+				return table.create(axes[cur_idx], fill)
+			end
+			
+			for idx = 1, axes[cur_idx] do
+				cur_arr[idx] = helper({}, cur_idx + 1)
+			end
+			
+			return cur_arr
 		end
 		
-		local res = {}
-		res._entries = entry
-		res._size = axes
-		return setmetatable(res, dynamic) :: DynamicMatrix
+		return setmetatable(helper(res, 1) :: {}, dynamic) :: DynamicMatrix
 	end
 	
 	return nil
