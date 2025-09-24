@@ -694,22 +694,18 @@ dynamic.getsize = function(self: DynamicMatrix): {number}
 	return self._size
 end
 
-dynamic.getentry = function(self: DynamicMatrix, ...: number): number?
+dynamic.getentry = function(self: DynamicMatrix, ...: number): RepeatingEntry
 	assert(isDynamicMatrix(self))
 	
 	local axes = {...}
 	local res = self._entries[axes[1]] :: {any}
-	
-	if #axes ~= #self._size then
-		return nil
-	end
 	
 	for i = 2, #axes do
 		assert(isNumber(axes[i]))
 		res = res[axes[i]]
 	end
 	
-	return res :: number
+	return res
 end
 
 -- ** DYNAMIC MATRIX - METATABLE ** --
