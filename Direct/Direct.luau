@@ -1,17 +1,38 @@
 --!strict
 
-local TypeCheck = require("../TypeCheck/TypeCheck")
-
 local module = {}
 
---[[
-Function: Gets the "depth" of <root>. This is not cached.
-A "depth" is defined to be a layer into an Instance.
-The total "depth" of an instance is how deep <root> is from the Datamodel "game".
-Returns the "depth".
-]]
+local function isString(candidate: string)
+	return typeof(candidate) == "string"
+end
+
+local function isNumber(candidate: number): boolean
+	if typeof(candidate) ~= "number" then
+		return false
+	end
+	
+	if candidate ~= candidate or math.abs(candidate) == math.huge then
+		return false
+	end
+	
+	return true
+end
+
+local function isInstance(candidate: Instance, classname: string?): boolean
+	if typeof(candidate) ~= "Instance" then
+		return false
+	end
+	
+	if typeof(classname) == "string" and candidate.ClassName ~= classname then
+		return false
+	end
+	
+	return true
+end
+
+-- Function: Gets the "depth" of <root>. This is not cached.
 module.GetHierarchyDepth = function(root: Instance): number
-	assert(TypeCheck.isInstance(root), `Failed to compute \`.GetHierarchyDepth()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+	assert(isInstance(root), `Failed to compute \`.GetHierarchyDepth()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
 	
 	root = root :: Instance
 	
@@ -25,14 +46,9 @@ module.GetHierarchyDepth = function(root: Instance): number
 	return res
 end
 
---[[
-Function: Gets the full directory path of <root>, except it is returned as an array. This is not cached.
-In Luau, arrays are 1-indexed, so the first element of the returned array, <root>, is at index 1.
-Every subsequent ancestor is at the next index. Stops at the service provider, before the Datamodel "game".
-Returns the string array.
-]]
+-- Function: Gets the full directory path of <root>, except it is returned as an array. This is not cached.
 module.GetFullNameAsStringArray = function(root: Instance): {string}
-	assert(TypeCheck.isInstance(root), `Failed to compute \`.GetFullNameAsStringArray()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+	assert(isInstance(root), `Failed to compute \`.GetFullNameAsStringArray()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
 	
 	root = root :: Instance
 	
@@ -46,14 +62,9 @@ module.GetFullNameAsStringArray = function(root: Instance): {string}
 	return res
 end
 
---[[
-Function: Gets the full directory path of <root>, except it is returned as an Instance array. This is not cached.
-In Luau, arrays are 1-indexed, so the first element of the returned array, <root>, is at index 1.
-Every subsequent ancestor is at the next index. Stops at the service provider, before the Datamodel "game".
-Returns the instances array.
-]]
+-- Function: Gets the full directory path of <root>, except it is returned as an Instance array. This is not cached.
 module.GetFullNameAsInstancesArray = function(root: Instance): {Instance}
-	assert(TypeCheck.isInstance(root), `Failed to compute \`.GetFullNameAsInstancesArray()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+	assert(isInstance(root), `Failed to compute \`.GetFullNameAsInstancesArray()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
 	
 	root = root :: Instance
 	
@@ -67,18 +78,14 @@ module.GetFullNameAsInstancesArray = function(root: Instance): {Instance}
 	return res
 end
 
---[[
-Function: Attempts to find the first instance that satisfy <name>. This is not cached.
-<name> can either be in the format from `Instance:GetFullName()` (built-in), or from `module.GetFullNameAsInstancesArray()` (module)
-Return the first instance to satisfy <name>. If failed, returns `nil`.
-]]
+-- Function: Attempts to find the first instance that satisfy <name>. This is not cached.
 module.FindFirstInstance = function(name: string | {string}): Instance?
-	local isString = TypeCheck.isString(name::string)
-	local isArray = TypeCheck.isArray(name::{string})
+	local is_str = isString(name::string)
+	local is_tbl = typeof(name) == "table"
 	
-	assert(isString or isArray)
+	assert(is_str or is_tbl, `Failed to compute \`.FindFirstInstance()\` function. Expected <string> or <\{string}> type for <name> (arg #1), got <{typeof(name)}>.`)
 	
-	if isString then
+	if is_str then
 		name = string.split(name::string, ".")
 	end
 	
@@ -104,7 +111,6 @@ module.FindFirstInstance = function(name: string | {string}): Instance?
 		local left_str_idx = stack[#stack - 1] :: number
 		local right_str_idx = stack[#stack] :: number
 		
-		-- remove from stack
 		table.remove(stack)
 		table.remove(stack)
 		table.remove(stack)
@@ -144,16 +150,10 @@ module.FindFirstInstance = function(name: string | {string}): Instance?
 	return nil
 end
 
---[[
-Function: Attempts to find the first descendant that satisfy the parameters. This is not cached.
-<root> is the starting instance.
-<target> is the target value to search for by the function.
-<depth> is the offset from the found descendant.
-<mode> is what behavior type the function should perform when searching for the descendant. By default, the "default" option is used, which is similar to `Instance:FindFirstChild(..., true)` (built-in).
-]]
+-- Function: Attempts to find the first descendant that satisfy the parameters. This is not cached.
 module.FindFirstDescendant = function(root: Instance, target: string, depth: number?, mode: ("default" | "class" | "inherit")?): Instance?
-	assert(TypeCheck.isInstance(root))
-	assert(TypeCheck.isString(target))
+	assert(isInstance(root), `Failed to compute \`.FindFirstDescendant()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+	assert(isString(target), `Failed to compute \`.FindFirstDescendant()\` function. Expected <string> type for <target> (arg #2), got <{typeof(target)}>.`)
 	
 	local found = nil
 	
@@ -185,9 +185,9 @@ module.FindFirstDescendant = function(root: Instance, target: string, depth: num
 		return nil
 	end
 	
-	depth = depth :: number
-	
-	if TypeCheck.isNumber(depth, false) then
+	if isNumber(depth::number) then
+		depth = depth :: number
+		
 		if depth > 0 then
 			for _ = 1, depth do
 				found = found.Parent
@@ -198,16 +198,10 @@ module.FindFirstDescendant = function(root: Instance, target: string, depth: num
 	return found
 end
 
---[[
-Function: Attempts to find the first ancestor that satisfy the parameters. This is not cached.
-<root> is the starting instance.
-<target> is the target value to search for by the function.
-<depth> is the offset from the found ancestor.
-<mode> is what behavior type the function should perform when searching for the ancestor. By default, the "default" option is used, which is similar to `Instance:FindFirstAncestor(...)` (built-in).
-]]
+-- Function: Attempts to find the first ancestor that satisfy the parameters. This is not cached.
 module.FindFirstAncestor = function(root: Instance, target: string, depth: number?, mode: ("default" | "class" | "inherit")?): Instance?
-	assert(TypeCheck.isInstance(root))
-	assert(TypeCheck.isString(target))
+	assert(isInstance(root), `Failed to compute \`.FindFirstAncestor()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+	assert(isString(target), `Failed to compute \`.FindFirstAncestor()\` function. Expected <string> type for <target> (arg #2), got <{typeof(target)}>.`)
 	
 	local found = nil
 	
@@ -225,9 +219,9 @@ module.FindFirstAncestor = function(root: Instance, target: string, depth: numbe
 		return nil
 	end
 	
-	depth = depth :: number
-	
-	if TypeCheck.isNumber(depth, false) then
+	if isNumber(depth::number) then
+		depth = depth :: number
+		
 		if depth > 0 then
 			for _ = 1, depth do
 				found = found.Parent
@@ -259,19 +253,15 @@ module.FindFirstAncestor = function(root: Instance, target: string, depth: numbe
 	return found
 end
 
---[[
-Function: Verify if <root> is the ancestor of <target>.
-<root> is the starting instance.
-<target> is the suspecting ancestor of <root>.
-<depth> is the offset from the found ancestor. By default, this behavior is not activated, and does not return the 2nd value. <depth> of 0 returns <root>.
-Returns a boolean to determine whether <root> is the ancestor of <target>, and an Instance that the offset from the <target>, if <depth> is provided.
-]]
+-- Function: Verify if <root> is the ancestor of <target>.
 module.IsAncestorOf = function(root: Instance, target: Instance, depth: number?): (boolean, Instance?)
-	assert(TypeCheck.isInstance(root), `Failed to compute \`.IsAncestorOf()\` function. Expected <Instance> type for <root>, got <{typeof(root)}>.`)
-	assert(TypeCheck.isInstance(target), `Failed to compute \`.IsAncestorOf()\` function. Expected <Instance> type for <target>, got <{typeof(target)}>.`)
+	assert(isInstance(root), `Failed to compute \`.IsAncestorOf()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+	assert(isInstance(target), `Failed to compute \`.IsAncestorOf()\` function. Expected <Instance> type for <target> (arg #2), got <{typeof(target)}>.`)
 	
 	if root:IsAncestorOf(target) then
-		if depth and TypeCheck.isNumber(depth, false) then
+		if isNumber(depth::number) then
+			depth = depth :: number
+			
 			if depth == 0 then
 				return true, target
 				
@@ -290,19 +280,15 @@ module.IsAncestorOf = function(root: Instance, target: Instance, depth: number?)
 	return false, nil
 end
 
---[[
-Function: Verify if <root> is the descendant of <target>.
-<root> is the starting instance.
-<target> is the suspecting descendant of <root>.
-<depth> is the offset from the found descendant. By default, this behavior is not activated, and does not return the 2nd value. <depth> of 0 returns <root>.
-Returns a boolean to determine whether <root> is the descendant of <target>, and an Instance that the offset from the <target>, if <depth> is provided.
-]]
+-- Function: Verify if <root> is the descendant of <target>.
 module.IsDescendantOf = function(root: Instance, target: Instance, depth: number?): (boolean, Instance?)
-	assert(TypeCheck.isInstance(root), `Failed to compute \`.IsDescendantOf()\` function. Expected <Instance> type for <root>, got <{typeof(root)}>.`)
-	assert(TypeCheck.isInstance(target), `Failed to compute \`.IsDescendantOf()\` function. Expected <Instance> type for <target>, got <{typeof(target)}>.`)
+	assert(isInstance(root), `Failed to compute \`.IsDescendantOf()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+	assert(isInstance(target), `Failed to compute \`.IsDescendantOf()\` function. Expected <Instance> type for <target> (arg #2), got <{typeof(target)}>.`)
 	
 	if root:IsDescendantOf(target) then
-		if depth and TypeCheck.isNumber(depth, false) then
+		if isNumber(depth::number) then
+			depth = depth :: number
+			
 			if depth == 0 then
 				return true, target
 				
