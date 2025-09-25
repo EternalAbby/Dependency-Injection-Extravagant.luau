@@ -25,11 +25,7 @@ module.isBoolean = function(candidate: boolean | nil, exclude_nil: boolean?): bo
 		return true
 	end
 	
-	if typeof(candidate) == "boolean" then
-		return true
-	end
-	
-	return false
+	return typeof(candidate) == "boolean"
 end
 
 module.isTable = function(candidate: {[any]: any}): boolean
