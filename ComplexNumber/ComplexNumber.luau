@@ -22,9 +22,10 @@ type AnyNumber = ComplexNumber | RawComplexNumber | number
 --type RawComplexOnly = RawComplexNumber | number
 type ObjectOnly = ComplexNumber | RawComplexNumber
 
+
 -- ** INTERNAL FUNCTIONS ** --
 
--- This function is from the TypeCheck module.
+-- This is a modified version of the function in TypeCheck. Checks whether a number is valid to use with this module.
 local function isNumber(candidate: number): (boolean, "" | "number")
 	if typeof(candidate) ~= "number" then
 		return false, ""
@@ -50,6 +51,7 @@ local function isRawComplexNumber(candidate: RawComplexNumber): (boolean, "" | "
 	return true, "RawComplexNumber"
 end
 
+-- This check function only accepts `ComplexNumber` objects, so `RawComplexNumber` objects are not allowed.
 local function isComplexNumber(candidate: ComplexNumber): (boolean, "" | "ComplexNumber")
 	if typeof(candidate) ~= "table" then
 		return false, ""
@@ -66,6 +68,7 @@ local function isComplexNumber(candidate: ComplexNumber): (boolean, "" | "Comple
 	return true, "ComplexNumber"
 end
 
+-- This is a wrapper function for type error handling.
 local function ThrowTypeError(expected_type: string, arg_name: string, arg_idx: number, arg_val: any): nil
 	error(`--------------------\
 	Error: Failed to perform \`{debug.info(4, "n")}\`.\
@@ -76,6 +79,7 @@ local function ThrowTypeError(expected_type: string, arg_name: string, arg_idx: 
 )
 end
 
+-- This is a wrapper function for division by 0 error handling. This appears in complex division and exponentiation.
 local function ThrowDivisionBy0Error(arg_name: string, arg_idx: number): nil
 	error(`--------------------\
 	Error: Failed to perform \`{debug.info(4, "n")}\`.\
@@ -86,6 +90,7 @@ local function ThrowDivisionBy0Error(arg_name: string, arg_idx: number): nil
 )
 end
 
+-- This is a wrapper function for undefined limit error handling. This only appear in complex exponentiation.
 local function ThrowUndefinedLimitError(arg_name: string, arg_idx: number): nil
 	error(`--------------------\
 	Error: Failed to perform \`{debug.info(4, "n")}\`.\
@@ -397,12 +402,10 @@ local function Complex_Magnitude_Compare(a: AnyNumber, idx_a: number): number
 	end
 end
 
+
 -- ** CONSTRUCTORS ** --
 
---[[
-Constructor: Creates a new `RawComplexNumber` object from `real`, and `complex`.
-This expression is valid for both the general form, and the rectangular form.
-]]
+-- Constructor: Creates a new `RawComplexNumber` object from `real`, and `complex`.
 module.newRaw = function(real: number, complex: number): RawComplexNumber
 	AnalyzeType(real, "number", "real", 1, isNumber)
 	AnalyzeType(complex, "number", "complex", 2, isNumber)
@@ -412,10 +415,7 @@ module.newRaw = function(real: number, complex: number): RawComplexNumber
 	}
 end
 
---[[
-Constructor: Creates a new `ComplexNumber` object from `real`, and `complex`.
-This expression is valid for both the general form, and the rectangular form.
-]]
+-- Constructor: Creates a new `ComplexNumber` object from `real`, and `complex`.
 module.new = function(real: number, complex: number): ComplexNumber
 	AnalyzeType(real, "number", "real", 1, isNumber)
 	AnalyzeType(complex, "number", "complex", 2, isNumber)
@@ -427,7 +427,7 @@ end
 
 --[[
 Constructor: Creates a new `ComplexNumber` object that is equivalent to (1 + 0𝒊).
-This constructor essentially creates and returns a unit for the real component.
+Essentially creates a unit on the real component.
 ]]
 module.real_unit = function(): ComplexNumber
 	return setmetatable({
@@ -438,7 +438,7 @@ end
 
 --[[
 Constructor: Creates a new `ComplexNumber` object that is equivalent to (0 + 1𝒊).
-This constructor essentially creates and returns the imaginary unit.
+Essentially creates the imaginary unit.
 ]]
 module.complex_unit = function(): ComplexNumber
 	return setmetatable({
@@ -447,10 +447,7 @@ module.complex_unit = function(): ComplexNumber
 	}, module)
 end
 
---[[
-Constructor: Creates a new `ComplexNumber` object from a valid `RawComplexNumber` type. Refer to Documentation for more details about this type.
-This expression is valid for both the general form, and the rectangular form.
-]]
+-- Constructor: Creates a new `ComplexNumber` object from a valid `RawComplexNumber` type.
 module.fromRaw = function(raw: RawComplexNumber): ComplexNumber
 	AnalyzeType(raw, "RawComplexNumber", "raw", 1, isRawComplexNumber)
 	return setmetatable({
@@ -461,7 +458,7 @@ end
 
 --[[
 Constructor: Creates a new `ComplexNumber` object from `magnitude`, and `argument` (angle in radians).
-This expression is valid for the polar form. After creation, the `ComplexNumber` object will be in the general form.
+After creation, the `ComplexNumber` object will be in the general form.
 ]]
 module.fromPolar = function(magnitude: number, argument: number): ComplexNumber
 	AnalyzeType(magnitude, "number", "magnitude", 1, isNumber)
@@ -490,7 +487,7 @@ end
 
 -- ** METHODS ** --
 
--- Method: Creates a new `ComplexNumber` object, whose real, and imaginary parts are copied from `self`.
+-- Method: Creates a new `ComplexNumber` object, whose real, and imaginary parts are taken from `self`.
 module.clone = function(self: ComplexNumber): ComplexNumber
 	AnalyzeType(self, "ComplexNumber", "self", 1, isComplexNumber)
 	return setmetatable({
@@ -501,7 +498,7 @@ end
 
 --[[
 Method: Computes the magnitude (modulus/absolute value) of `self`.
-Similarly, using `#` operator on a <ComplexNumber> object returns this result.
+Similarly, using `#` operator on a `ComplexNumber` object returns this result.
 ]]
 module.magnitude = function(self: ComplexNumber): number
 	AnalyzeType(self, "ComplexNumber", "self", 1, isComplexNumber)
@@ -514,7 +511,7 @@ module.argument = function(self: ComplexNumber): number
 	return math.atan2(self.complex, self.real)
 end
 
--- Method: Creates a new <ComplexNumber> object that is the complex conjugate of `self`.
+-- Method: Creates a new `ComplexNumber` object that is the complex conjugate of `self`.
 module.conjugate = function(self: ComplexNumber): ComplexNumber
 	AnalyzeType(self, "ComplexNumber", "self", 1, isComplexNumber)
 	return module.new(self.real, -self.complex)
