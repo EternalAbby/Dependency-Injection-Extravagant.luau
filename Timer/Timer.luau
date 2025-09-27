@@ -22,12 +22,10 @@ local storage: TimerStorage = {}
 
 -- ** INTERNAL FUNCTIONS ** --
 
--- This function is from the TypeCheck module.
 local function isString(candidate: string): boolean
 	return typeof(candidate) == "string"
 end
 
--- This function is from the TypeCheck module.
 local function isNumber(candidate: number): boolean
 	if typeof(candidate) ~= "number" then
 		return false
@@ -43,12 +41,15 @@ end
 
 -- ** CONSTRUCTORS ** --
 
--- Constructor: Creates a new <Timer> object.
+--[[
+Constructor: Creates a new `Timer` object.
+<id> must not collide with a pre-existing <Timer> object.
+]]
 module.new = function(duration: number, id: TimerId): Timer
-	assert(isNumber(duration))
-	assert(duration > 0)
-	assert(isNumber(id::number) or isString(id::string))
-	assert(module.hasTimer(id))
+	assert(isNumber(duration), `Failed to perform \`.new()\` constructor. Attempted to set <duration> to an invalid type. Expected <number> type, got <{typeof(duration)}>.`)
+	assert(duration > 0, `Failed to perform \`.new()\` constructor. Attempted to set <duration> to a non-positive number, got {duration}.`)
+	assert(isNumber(id::number) or isString(id::string), `Failed to perform \`.new()\` constructor. Attempted to set <id> to an invalid type. Expected <string> or <number> type, got <{typeof(id)}>.`)
+	assert(not module.hasTimer(id), `Failed to perform \`.new()\` constructor. Attempted to set <id> to a pre-existing <Timer> object.`)
 	
 	local new = {}
 	new._duration = duration
@@ -65,9 +66,12 @@ end
 
 -- ** FUNCTIONS ** --
 
--- Function: Removes the <Timer> object by using TimerId.
+--[[
+Function: Removes the <Timer> object by using <id>.
+Returns a boolean to determine whether the <Timer> object existed.
+]]
 module.remove = function(id: TimerId): boolean
-	assert(isNumber(id::number) or isString(id::string))
+	assert(isNumber(id::number) or isString(id::string), `Failed to perform \`.remove()\` function. Attempted to find a <Timer> object with an invalid <TimerId> type. Expected <string> or <number> type, got <{typeof(id)}>.`)
 	if storage[id] then
 		storage[id] = nil
 		return true
@@ -75,31 +79,43 @@ module.remove = function(id: TimerId): boolean
 	return false
 end
 
--- Function: Gets the <Timer> object by using TimerId.
+--[[
+Function: Gets the <Timer> object by using <id>.
+Returns the <Timer> object if found, otherwise returns `nil`.
+]]
 module.getTimer = function(id: TimerId): Timer?
-	assert(isNumber(id::number) or isString(id::string))
+	assert(isNumber(id::number) or isString(id::string), `Failed to perform \`.getTimer()\` function. Attempted to find a <Timer> object with an invalid <TimerId> type. Expected <string> or <number> type, got <{typeof(id)}>.`)
 	return storage[id]
 end
 
--- Function: Checks whether a <Timer> object with TimerId already exists.
+--[[
+Function: Checks whether a <Timer> object with <id> exists.
+Returns a boolean to determine whether the <Timer> object existed.
+]]
 module.hasTimer = function(id: TimerId): boolean
-	assert(isNumber(id::number) or isString(id::string))
+	assert(isNumber(id::number) or isString(id::string), `Failed to perform \`.hasTimer()\` function. Attempted to find a <Timer> object with an invalid <TimerId> type. Expected <string> or <number> type, got <{typeof(id)}>.`)
 	return storage[id] ~= nil
 end
 
--- Function: Checks whether the candidate is a valid <Timer> object.
+--[[
+Function: Determines if the <candidate> is a valid <Timer> object.
+This function checks the memory of <candidate> using an internal storage in the module.
+]]
 module.isTimer = function(candidate: Timer): boolean
-	return candidate and storage[candidate._id] and storage[candidate._id] == candidate
+	return typeof(candidate) == "table" and storage[candidate._id] == candidate
 end
 
 
 -- ** METHODS ** --
 
--- Method: Simulate starting the <Timer> object.
+--[[
+Method: Starts the `Timer` object.
+This method simulates the `Timer` object.
+]]
 module.Start = function(self: Timer): boolean
 	local start = os.clock()
 	
-	assert(module.isTimer(self))
+	assert(module.isTimer(self), `Failed to perform \`:Start()\` method. Attempted to start an invalid <Timer> object.`)
 	
 	if self._isActive then
 		return false
@@ -112,9 +128,12 @@ module.Start = function(self: Timer): boolean
 	return true
 end
 
--- Method: Simulate resuming the <Timer> object.
+--[[
+Method: Resumes the `Timer` object.
+This method simulates the `Timer` object.
+]]
 module.Resume = function(self: Timer): boolean
-	assert(module.isTimer(self))
+	assert(module.isTimer(self), `Failed to perform \`:Resume()\` method. Attempted to resume an invalid <Timer> object.`)
 	
 	if self._isActive or self._startTime == -1 or self._stopTime == -1 or self._pauseTime == -1 then
 		return false
@@ -125,11 +144,14 @@ module.Resume = function(self: Timer): boolean
 	return true
 end
 
--- Method: Simulate pausing the <Timer> object.
+--[[
+Method: Pauses the `Timer` object.
+This method simulates the `Timer` object.
+]]
 module.Pause = function(self: Timer): boolean
 	local pause = os.clock()
 	
-	assert(module.isTimer(self))
+	assert(module.isTimer(self), `Failed to perform \`:Pause()\` method. Attempted to pause an invalid <Timer> object.`)
 	
 	if not self._isActive then
 		return false
@@ -140,9 +162,12 @@ module.Pause = function(self: Timer): boolean
 	return true
 end
 
--- Method: Simulate stopping the <Timer> object.
+--[[
+Method: Stops the `Timer` object.
+This method simulates the `Timer` object.
+]]
 module.Stop = function(self: Timer): boolean
-	assert(module.isTimer(self))
+	assert(module.isTimer(self), `Failed to perform \`:Stop()\` method. Attempted to stop an invalid <Timer> object.`)
 	
 	if not self._isActive then
 		return false
@@ -155,9 +180,12 @@ module.Stop = function(self: Timer): boolean
 	return true
 end
 
--- Method: Returns the current time remaining in the <Timer> object. Returns -1 if not active at the time of function call.
+--[[
+Method: Returns the current time remaining of the `Timer` object.
+If the `Timer` object is not active, returns `-1`.
+]]
 module.GetCurrentTime = function(self: Timer): number
-	assert(module.isTimer(self))
+	assert(module.isTimer(self), `Failed to perform \`:GetCurrentTime()\` method. Attempted to perform operation using an invalid <Timer> object.`)
 	
 	if self._pauseTime ~= -1 and os.clock() - self._pauseTime >= self._stopTime
 	or self._pauseTime == -1 and os.clock() - self._startTime >= self._stopTime then
@@ -170,25 +198,27 @@ module.GetCurrentTime = function(self: Timer): number
 	return -1
 end
 
--- Method: Sets the duration of the <Timer> object to the <seconds> parameter. Does not change simulated stop time.
+--[[
+Method: Sets the duration of the `Timer` object to the amount in <seconds>.
+If the <Timer> object is running, this method does not affect it.
+]]
 module.SetDuration = function(self: Timer, seconds: number): boolean
-	assert(module.isTimer(self))
-	assert(isNumber(seconds))
-	
+	assert(module.isTimer(self), `Failed to perform \`:SetDuration()\` method. Attempted to perform operation using an invalid <Timer> object.`)
+	assert(isNumber(seconds), `Failed to perform \`:SetDuration()\` method. Attempted to set <duration> to an invalid type. Expected <number> type, got <{typeof(seconds)}>.`)
+	assert(seconds > 0, `Failed to perform \`:GetCurrenSetDurationtTime()\` method. Attempted to set <duration> to a non-positive number, got {seconds}.`)
 	self._duration = seconds
 	return true
 end
 
--- Method: Checks whether the <Timer> object is running.
+-- Method: Checks whether the `Timer` object is running.
 module.isRunning = function(self: Timer): boolean
-	assert(module.isTimer(self))
+	assert(module.isTimer(self), `Failed to perform \`:isRunning()\` method. Attempted to perform operation using an invalid <Timer> object.`)
 	return self._isActive and os.clock() < self._stopTime
 end
 
--- Method: Checks whether the <Timer> object has ended.
+-- Method: Checks whether the `Timer` object has ended.
 module.isEnded = function(self: Timer): boolean
-	assert(module.isTimer(self))
-	
+	assert(module.isTimer(self), `Failed to perform \`:isEnded()\` method. Attempted to perform operation using an invalid <Timer> object.`)
 	if os.clock() >= self._stopTime then
 		self._isActive = false
 	end
