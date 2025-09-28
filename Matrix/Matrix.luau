@@ -174,14 +174,13 @@ local function isDynamicMatrix(candidate: DynamicMatrix): boolean
 	
 	local total_layer = #candidate._size
 	
-	-- TODO: test this function
 	local function helper(cur_arr: RepeatingEntry, cur_layer: number): boolean
 		if cur_layer == total_layer then
 			local axis_val = candidate._size[cur_layer]
 			local total_entry = 0
 			
 			for idx, entry in cur_arr do
-				if not isNumber(idx) or isNumber(entry::number) then
+				if not isNumber(idx) or not isNumber(entry::number) then
 					return false
 				end
 				
@@ -227,12 +226,14 @@ module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: n
 		assert(isNumber(m))
 		assert(isNumber(n))
 		
-		local new_row = table.create(n, fill)
-		local new_entries = table.create(m, new_row)
-		
 		local res = {}
-		res._entries = new_entries
+		res._entries = {}
 		res._size = {m, n}
+		
+		for i = 1, m do
+			res._entries[i] = table.create(n, fill)
+		end
+		
 		return setmetatable(res, matrix) :: Matrix
 		
 	elseif name == "StaticMatrix" then
@@ -590,6 +591,7 @@ static.transpose = function(self: StaticMatrix): StaticMatrix
 	return setmetatable(new, static)
 end
 
+
 -- ** STATIC MATRIX - METATABLE ** --
 
 static.__index = static
@@ -670,12 +672,11 @@ static.__mul = function(a: StaticMatrix | number, b: StaticMatrix | number): Sta
 		
 		for i = 1, m * p do
 			local val = 0
-			local row = (i - 1) % p + 1
-			local col = (i - 1) // p + 1
+			local row = (i - 1) // p + 1
+			local col = (i - 1) % p + 1
 			
-			-- TODO: test function
 			for j = 1, n do
-				val += a._entries[row * n + j] * b._entries[row * j + col]
+				val += a._entries[(row - 1) * n + j] * b._entries[p * (j - 1) + col]
 			end
 			
 			new._entries[i] = val
@@ -684,6 +685,7 @@ static.__mul = function(a: StaticMatrix | number, b: StaticMatrix | number): Sta
 		return setmetatable(new, static)
 	end
 end
+
 
 -- ** DYNAMIC MATRIX OBJECT ** --
 -- ** DYNAMIC MATRIX - METHODS ** --
@@ -707,6 +709,7 @@ dynamic.getentry = function(self: DynamicMatrix, ...: number): RepeatingEntry
 	
 	return res
 end
+
 
 -- ** DYNAMIC MATRIX - METATABLE ** --
 
