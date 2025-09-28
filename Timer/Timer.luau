@@ -117,10 +117,6 @@ module.Start = function(self: Timer): boolean
 	
 	assert(module.isTimer(self), `Failed to perform \`:Start()\` method. Attempted to start an invalid <Timer> object.`)
 	
-	if self._isActive then
-		return false
-	end
-	
 	self._startTime = start
 	self._stopTime = start + self._duration
 	self._pauseTime = -1
@@ -139,7 +135,8 @@ module.Resume = function(self: Timer): boolean
 		return false
 	end
 	
-	self._stopTime += self._pauseTime - self._startTime
+	self._stopTime += os.clock() - self._pauseTime
+	self._pauseTime = -1
 	self._isActive = true
 	return true
 end
@@ -169,7 +166,7 @@ This method simulates the `Timer` object.
 module.Stop = function(self: Timer): boolean
 	assert(module.isTimer(self), `Failed to perform \`:Stop()\` method. Attempted to stop an invalid <Timer> object.`)
 	
-	if not self._isActive then
+	if self._startTime == -1 and self._stopTime == -1 and self._pauseTime == -1 and not self._isActive then
 		return false
 	end
 	
@@ -187,13 +184,15 @@ If the `Timer` object is not active, returns `-1`.
 module.GetCurrentTime = function(self: Timer): number
 	assert(module.isTimer(self), `Failed to perform \`:GetCurrentTime()\` method. Attempted to perform operation using an invalid <Timer> object.`)
 	
-	if self._pauseTime ~= -1 and os.clock() - self._pauseTime >= self._stopTime
-	or self._pauseTime == -1 and os.clock() - self._startTime >= self._stopTime then
+	if os.clock() >= self._stopTime then
 		self._isActive = false
 	end
 	
 	if self._isActive then
-		return os.clock() - self._startTime
+		return self._stopTime - os.clock()
+		
+	elseif self._pauseTime ~= -1 then
+		return self._stopTime - self._pauseTime
 	end
 	return -1
 end
@@ -219,10 +218,10 @@ end
 -- Method: Checks whether the `Timer` object has ended.
 module.isEnded = function(self: Timer): boolean
 	assert(module.isTimer(self), `Failed to perform \`:isEnded()\` method. Attempted to perform operation using an invalid <Timer> object.`)
-	if os.clock() >= self._stopTime then
+	if self._pauseTime == -1 and os.clock() >= self._stopTime then
 		self._isActive = false
 	end
-	return not self._isActive
+	return self._pauseTime == -1 and not self._isActive
 end
 
 
