@@ -15,7 +15,7 @@ Along with being very simple to use.
 
 There are 2 main methods to download modules from this repository: individual and group.
 
-After downloading, make sure to check out WHAT, a Wiki for DIE. This is located in the Wiki section of the repository.
+After downloading, make sure to check out [WHAT](https://github.com/EternalAbby/Dependency-Injection-Extravagant.luau/wiki), a Wiki for DIE. This is located in the Wiki section of the repository.
 
 ## Individual download
 
