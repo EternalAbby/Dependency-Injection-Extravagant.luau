@@ -1,94 +1,180 @@
 --!strict
 
-local TypeCheck = require("../TypeCheck/TypeCheck")
+-- Version: 1.1.0
+
+type Cache_Result = {
+	[any]: any
+}
+
+type Cache = {
+	[Instance]: {
+		["results"]: {[string]: Cache_Result},
+		["connections"]: {RBXScriptConnection}
+	}
+}
+
+local cache: Cache = {}
 
 local module = {}
 
---[[
-Function: Gets the "depth" of <root>. This is not cached.
-A "depth" is defined to be a layer into an Instance.
-The total "depth" of an instance is how deep <root> is from the Datamodel "game".
-Returns the "depth".
-]]
-module.GetHierarchyDepth = function(root: Instance): number
-	assert(TypeCheck.isInstance(root), `Failed to compute \`.GetHierarchyDepth()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+local function isString(candidate: string)
+	return typeof(candidate) == "string"
+end
+
+local function isNumber(candidate: number): boolean
+	if typeof(candidate) ~= "number" then
+		return false
+	end
 	
-	root = root :: Instance
+	if candidate ~= candidate or math.abs(candidate) == math.huge then
+		return false
+	end
+	
+	return true
+end
+
+local function isInstance(candidate: Instance, classname: string?): boolean
+	if typeof(candidate) ~= "Instance" then
+		return false
+	end
+	
+	if typeof(classname) == "string" and candidate.ClassName ~= classname then
+		return false
+	end
+	
+	return true
+end
+
+local function KillCachedResult(key: any)
+	for _, connection in cache[key]["connections"] do
+		if connection.Connected then
+			connection:Disconnect()
+		end
+	end
+	cache[key] = nil
+end
+
+local function PopulateCache(key: any, func: string, cache_idx: any, cache_result: any, ...: RBXScriptConnection)
+	if not cache[key] then
+		cache[key] = {
+			["results"] = {
+				[func] = {[cache_idx] = cache_result}
+			},
+			
+			["connections"] = {
+				key.AncestryChanged:Once(function()
+					KillCachedResult(key)
+				end),
+				
+				key.Destroying:Once(function()
+					KillCachedResult(key)
+				end)
+			}
+		}
+		
+	else
+		cache[key]["results"][func] = {
+			[cache_idx] = cache_result
+		}
+	end
+	
+	for _, connection in {...} do
+		table.insert(cache[key]["connections"], connection)
+	end
+end
+
+local function SearchCache(key: any, func: string, cache_idx: any): any?
+	if cache[key] and cache[key]["results"][func] and cache[key]["results"][func][cache_idx] then
+		return cache[key]["results"][func][cache_idx]
+	end
+	
+	return nil
+end
+
+-- Function: Gets the "depth" of <root>.
+module.GetHierarchyDepth = function(root: Instance, ignore_cache: boolean?): number
+	assert(isInstance(root), `Failed to compute \`.GetHierarchyDepth()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+	
+	if not ignore_cache then
+		local cached = SearchCache(root, "GetHierarchyDepth", root)
+		if cached then
+			return cached
+		end
+	end
 	
 	local res = 0
-	
 	while root.Parent do
 		res += 1
 		root = root.Parent
 	end
 	
+	if not ignore_cache then
+		PopulateCache(root, "GetHierarchyDepth", root, res)
+	end
 	return res
 end
 
---[[
-Function: Gets the full directory path of <root>, except it is returned as an array. This is not cached.
-In Luau, arrays are 1-indexed, so the first element of the returned array, <root>, is at index 1.
-Every subsequent ancestor is at the next index. Stops at the service provider, before the Datamodel "game".
-Returns the string array.
-]]
-module.GetFullNameAsStringArray = function(root: Instance): {string}
-	assert(TypeCheck.isInstance(root), `Failed to compute \`.GetFullNameAsStringArray()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+-- Function: Gets the full directory path of <root>, except it is returned as an array.
+module.GetFullNameAsStringArray = function(root: Instance, ignore_cache: boolean?): {string}
+	assert(isInstance(root), `Failed to compute \`.GetFullNameAsStringArray()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
 	
-	root = root :: Instance
+	if not ignore_cache then
+		local cached = SearchCache(root, "GetFullNameAsStringArray", root)
+		if cached then
+			return cached
+		end
+	end
 	
 	local res: {string} = {}
-	
 	while root.Parent do
 		table.insert(res, root.Name)
 		root = root.Parent
 	end
 	
+	if not ignore_cache then
+		PopulateCache(root, "GetFullNameAsStringArray", root, res)
+	end
 	return res
 end
 
---[[
-Function: Gets the full directory path of <root>, except it is returned as an Instance array. This is not cached.
-In Luau, arrays are 1-indexed, so the first element of the returned array, <root>, is at index 1.
-Every subsequent ancestor is at the next index. Stops at the service provider, before the Datamodel "game".
-Returns the instances array.
-]]
-module.GetFullNameAsInstancesArray = function(root: Instance): {Instance}
-	assert(TypeCheck.isInstance(root), `Failed to compute \`.GetFullNameAsInstancesArray()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+-- Function: Gets the full directory path of <root>, except it is returned as an Instance array.
+module.GetFullNameAsInstancesArray = function(root: Instance, ignore_cache: boolean?): {Instance}
+	assert(isInstance(root), `Failed to compute \`.GetFullNameAsInstancesArray()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
 	
-	root = root :: Instance
+	if not ignore_cache then
+		local cached = SearchCache(root, "GetFullNameAsInstancesArray", root)
+		if cached then
+			return cached
+		end
+	end
 	
 	local res: {Instance} = {}
-	
 	while root.Parent do
 		table.insert(res, root)
 		root = root.Parent
 	end
 	
+	if not ignore_cache then
+		PopulateCache(root, "GetFullNameAsInstancesArray", root, res)
+	end
 	return res
 end
 
---[[
-Function: Attempts to find the first instance that satisfy <name>. This is not cached.
-<name> can either be in the format from `Instance:GetFullName()` (built-in), or from `module.GetFullNameAsInstancesArray()` (module)
-Return the first instance to satisfy <name>. If failed, returns `nil`.
-]]
-module.FindFirstInstance = function(name: string | {string}): Instance?
-	-- FIXME: Although this function has been made into an iterative solution, it still performs slower than its recursive counterpart.
-	-- The bottleneck may be caused from the stack filling operations (specifically, the for loop inside of the main while loop).
-	-- Additionally, these are the only main differences between the iterative solution, and the recursive one;
-	--		1. Iterative loops over every children of the "current_root".
-	--		2. Iterative creates a new data dictionary for each child.
-	--		3. Iterative adds those data to the "stack".
-	-- Out of all of these differences, 1. may be impacting the most for average time complexity, which is necessary to optimize,
-	-- as the recursive solution does not have to go through every children before going to the next depth, so performance are lost
-	-- when there are too many children.
+-- Function: Attempts to find the first instance that satisfy <name>.
+module.FindFirstInstance = function(name: string | {string}, ignore_cache: boolean?): Instance?
+	local is_str = isString(name::string)
+	local is_tbl = typeof(name) == "table"
 	
-	local isString = TypeCheck.isString(name::string)
-	local isArray = TypeCheck.isArray(name::{string})
+	assert(is_str or is_tbl, `Failed to compute \`.FindFirstInstance()\` function. Expected <string> or <\{string}> type for <name> (arg #1), got <{typeof(name)}>.`)
 	
-	assert(isString or isArray)
+	if not ignore_cache then
+		local cached = SearchCache(name, "FindFirstInstance", name)
+		if cached then
+			return cached
+		end
+	end
 	
-	if isString then
+	if is_str then
 		name = string.split(name::string, ".")
 	end
 	
@@ -114,7 +200,6 @@ module.FindFirstInstance = function(name: string | {string}): Instance?
 		local left_str_idx = stack[#stack - 1] :: number
 		local right_str_idx = stack[#stack] :: number
 		
-		-- remove from stack
 		table.remove(stack)
 		table.remove(stack)
 		table.remove(stack)
@@ -131,11 +216,20 @@ module.FindFirstInstance = function(name: string | {string}): Instance?
 		local current_tofind = dp[left_str_idx][right_str_idx]
 		local found = false
 		
-		-- FIXME: This loop may be the bottleneck of the iterative solution
-		-- for slower performance than the recursive solution.
 		for _, child in current_root:GetChildren() do
 			if child.Name == current_tofind then
 				if right_str_idx == #name then
+					if not ignore_cache then
+						PopulateCache(name, "GetFullNameAsInstancesArray", name, child,
+							child.AncestryChanged:Once(function()
+								KillCachedResult(name)
+							end),
+							
+							child.Destroying:Once(function()
+								KillCachedResult(name)
+							end)
+						)
+					end
 					return child
 				end
 				
@@ -156,16 +250,17 @@ module.FindFirstInstance = function(name: string | {string}): Instance?
 	return nil
 end
 
---[[
-Function: Attempts to find the first descendant that satisfy the parameters. This is not cached.
-<root> is the starting instance.
-<target> is the target value to search for by the function.
-<depth> is the offset from the found descendant.
-<mode> is what behavior type the function should perform when searching for the descendant. By default, the "default" option is used, which is similar to `Instance:FindFirstChild(..., true)` (built-in).
-]]
-module.FindFirstDescendant = function(root: Instance, target: string, depth: number?, mode: ("default" | "class" | "inherit")?): Instance?
-	assert(TypeCheck.isInstance(root))
-	assert(TypeCheck.isString(target))
+-- Function: Attempts to find the first descendant that satisfy the parameters.
+module.FindFirstDescendant = function(root: Instance, target: string, depth: number?, mode: ("default" | "class" | "inherit")?, ignore_cache: boolean?): Instance?
+	assert(isInstance(root), `Failed to compute \`.FindFirstDescendant()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+	assert(isString(target), `Failed to compute \`.FindFirstDescendant()\` function. Expected <string> type for <target> (arg #2), got <{typeof(target)}>.`)
+	
+	if not ignore_cache then
+		local cached = SearchCache(root, "FindFirstDescendant", {target, depth, if mode then mode else "default"})
+		if cached then
+			return cached
+		end
+	end
 	
 	local found = nil
 	
@@ -190,6 +285,7 @@ module.FindFirstDescendant = function(root: Instance, target: string, depth: num
 		found = root:FindFirstChildWhichIsA(target, true)
 		
 	else
+		mode = "default"
 		found = root:FindFirstChild(target, true)
 	end
 	
@@ -197,9 +293,9 @@ module.FindFirstDescendant = function(root: Instance, target: string, depth: num
 		return nil
 	end
 	
-	depth = depth :: number
-	
-	if TypeCheck.isNumber(depth, false) then
+	if isNumber(depth::number) then
+		depth = depth :: number
+		
 		if depth > 0 then
 			for _ = 1, depth do
 				found = found.Parent
@@ -207,19 +303,33 @@ module.FindFirstDescendant = function(root: Instance, target: string, depth: num
 		end
 	end
 	
+	found = found :: Instance
+	
+	if not ignore_cache then
+		PopulateCache(root, "FindFirstDescendant", {target, depth, mode}, found,
+			found.AncestryChanged:Once(function()
+				KillCachedResult(root)
+			end),
+			
+			found.Destroying:Once(function()
+				KillCachedResult(root)
+			end)
+		)
+	end
 	return found
 end
 
---[[
-Function: Attempts to find the first ancestor that satisfy the parameters. This is not cached.
-<root> is the starting instance.
-<target> is the target value to search for by the function.
-<depth> is the offset from the found ancestor.
-<mode> is what behavior type the function should perform when searching for the ancestor. By default, the "default" option is used, which is similar to `Instance:FindFirstAncestor(...)` (built-in).
-]]
-module.FindFirstAncestor = function(root: Instance, target: string, depth: number?, mode: ("default" | "class" | "inherit")?): Instance?
-	assert(TypeCheck.isInstance(root))
-	assert(TypeCheck.isString(target))
+-- Function: Attempts to find the first ancestor that satisfy the parameters.
+module.FindFirstAncestor = function(root: Instance, target: string, depth: number?, mode: ("default" | "class" | "inherit")?, ignore_cache: boolean?): Instance?
+	assert(isInstance(root), `Failed to compute \`.FindFirstAncestor()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+	assert(isString(target), `Failed to compute \`.FindFirstAncestor()\` function. Expected <string> type for <target> (arg #2), got <{typeof(target)}>.`)
+	
+	if not ignore_cache then
+		local cached = SearchCache(root, "FindFirstAncestor", {target, depth, if mode then mode else "default"})
+		if cached then
+			return cached
+		end
+	end
 	
 	local found = nil
 	
@@ -230,6 +340,7 @@ module.FindFirstAncestor = function(root: Instance, target: string, depth: numbe
 		found = root:FindFirstAncestorWhichIsA(target)
 		
 	else
+		mode = "default"
 		found = root:FindFirstAncestor(target)
 	end
 	
@@ -237,9 +348,9 @@ module.FindFirstAncestor = function(root: Instance, target: string, depth: numbe
 		return nil
 	end
 	
-	depth = depth :: number
-	
-	if TypeCheck.isNumber(depth, false) then
+	if isNumber(depth::number) then
+		depth = depth :: number
+		
 		if depth > 0 then
 			for _ = 1, depth do
 				found = found.Parent
@@ -268,23 +379,51 @@ module.FindFirstAncestor = function(root: Instance, target: string, depth: numbe
 		end
 	end
 	
+	found = found :: Instance
+	
+	if not ignore_cache then
+		PopulateCache(root, "FindFirstAncestor", {target, depth, mode}, found,
+			found.AncestryChanged:Once(function()
+				KillCachedResult(root)
+			end),
+			
+			found.Destroying:Once(function()
+				KillCachedResult(root)
+			end)
+		)
+	end
+	
 	return found
 end
 
---[[
-Function: Verify if <root> is the ancestor of <target>.
-<root> is the starting instance.
-<target> is the suspecting ancestor of <root>.
-<depth> is the offset from the found ancestor. By default, this behavior is not activated, and does not return the 2nd value. <depth> of 0 returns <root>.
-Returns a boolean to determine whether <root> is the ancestor of <target>, and an Instance that the offset from the <target>, if <depth> is provided.
-]]
-module.IsAncestorOf = function(root: Instance, target: Instance, depth: number?): (boolean, Instance?)
-	assert(TypeCheck.isInstance(root), `Failed to compute \`.IsAncestorOf()\` function. Expected <Instance> type for <root>, got <{typeof(root)}>.`)
-	assert(TypeCheck.isInstance(target), `Failed to compute \`.IsAncestorOf()\` function. Expected <Instance> type for <target>, got <{typeof(target)}>.`)
+-- Function: Verify if <root> is the ancestor of <target>.
+module.IsAncestorOf = function(root: Instance, target: Instance, depth: number?, ignore_cache: boolean?): (boolean, Instance?)
+	assert(isInstance(root), `Failed to compute \`.IsAncestorOf()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+	assert(isInstance(target), `Failed to compute \`.IsAncestorOf()\` function. Expected <Instance> type for <target> (arg #2), got <{typeof(target)}>.`)
+	
+	if not ignore_cache then
+		local cached = SearchCache(root, "IsAncestorOf", {target, depth})
+		if cached then
+			return table.unpack(cached::{any})
+		end
+	end
 	
 	if root:IsAncestorOf(target) then
-		if depth and TypeCheck.isNumber(depth, false) then
+		if isNumber(depth::number) then
+			depth = depth :: number
+			
 			if depth == 0 then
+				if not ignore_cache then
+					PopulateCache(root, "IsAncestorOf", {target, 0}, {true, target},
+						target.AncestryChanged:Once(function()
+							KillCachedResult(root)
+						end),
+						
+						target.Destroying:Once(function()
+							KillCachedResult(root)
+						end)
+					)
+				end
 				return true, target
 				
 			elseif depth > 0 then
@@ -292,35 +431,83 @@ module.IsAncestorOf = function(root: Instance, target: Instance, depth: number?)
 					target = target.Parent :: Instance
 				end
 				
+				if not ignore_cache then
+					PopulateCache(root, "IsAncestorOf", {target, depth}, {true, target},
+						target.AncestryChanged:Once(function()
+							KillCachedResult(root)
+						end),
+						
+						target.Destroying:Once(function()
+							KillCachedResult(root)
+						end)
+					)
+				end
+				
 				return true, target
 			end
 		end
 		
+		if not ignore_cache then
+			PopulateCache(root, "IsAncestorOf", {target, nil}, {true, nil},
+				target.AncestryChanged:Once(function()
+					KillCachedResult(root)
+				end),
+				
+				target.Destroying:Once(function()
+					KillCachedResult(root)
+				end)
+			)
+		end
 		return true, nil
 	end
 	
 	return false, nil
 end
 
---[[
-Function: Verify if <root> is the descendant of <target>.
-<root> is the starting instance.
-<target> is the suspecting descendant of <root>.
-<depth> is the offset from the found descendant. By default, this behavior is not activated, and does not return the 2nd value. <depth> of 0 returns <root>.
-Returns a boolean to determine whether <root> is the descendant of <target>, and an Instance that the offset from the <target>, if <depth> is provided.
-]]
-module.IsDescendantOf = function(root: Instance, target: Instance, depth: number?): (boolean, Instance?)
-	assert(TypeCheck.isInstance(root), `Failed to compute \`.IsDescendantOf()\` function. Expected <Instance> type for <root>, got <{typeof(root)}>.`)
-	assert(TypeCheck.isInstance(target), `Failed to compute \`.IsDescendantOf()\` function. Expected <Instance> type for <target>, got <{typeof(target)}>.`)
+-- Function: Verify if <root> is the descendant of <target>.
+module.IsDescendantOf = function(root: Instance, target: Instance, depth: number?, ignore_cache: boolean?): (boolean, Instance?)
+	assert(isInstance(root), `Failed to compute \`.IsDescendantOf()\` function. Expected <Instance> type for <root> (arg #1), got <{typeof(root)}>.`)
+	assert(isInstance(target), `Failed to compute \`.IsDescendantOf()\` function. Expected <Instance> type for <target> (arg #2), got <{typeof(target)}>.`)
+	
+	if not ignore_cache then
+		local cached = SearchCache(root, "IsDescendantOf", {target, depth})
+		if cached then
+			return table.unpack(cached::{any})
+		end
+	end
 	
 	if root:IsDescendantOf(target) then
-		if depth and TypeCheck.isNumber(depth, false) then
+		if isNumber(depth::number) then
+			depth = depth :: number
+			
 			if depth == 0 then
+				if not ignore_cache then
+					PopulateCache(root, "IsDescendantOf", {target, 0}, {true, target},
+						target.AncestryChanged:Once(function()
+							KillCachedResult(root)
+						end),
+						
+						target.Destroying:Once(function()
+							KillCachedResult(root)
+						end)
+					)
+				end
 				return true, target
 				
 			elseif depth > 0 then
 				for _ = 1, depth do
 					target = target.Parent :: Instance
+				end
+				if not ignore_cache then
+					PopulateCache(root, "IsDescendantOf", {target, depth}, {true, target},
+						target.AncestryChanged:Once(function()
+							KillCachedResult(root)
+						end),
+						
+						target.Destroying:Once(function()
+							KillCachedResult(root)
+						end)
+					)
 				end
 				return true, target
 				
@@ -341,6 +528,9 @@ module.IsDescendantOf = function(root: Instance, target: Instance, depth: number
 				
 				for _ = 1, iter do
 					root = root.Parent :: Instance
+				end
+				if not ignore_cache then
+					PopulateCache(root, "IsDescendantOf", {target, depth}, {true, root})
 				end
 				return true, root
 			end

@@ -1,25 +1,11 @@
 --!strict
 
+-- Version: 0.4.0
+
 local module = {}
 
--- This type is taken from the ComplexNumber module.
-type RawComplexNumber = {
-	["real"]: number,
-	["complex"]: number
-}
-
--- This type is taken from the ComplexNumber module.
-type ComplexNumber = setmetatable<{
-	["real"]: number,
-	["complex"]: number
-}, {__metatable: "ComplexNumber"}>
-
 module.isString = function(candidate: string): boolean
-	if typeof(candidate) ~= "string" then
-		return false
-	end
-	
-	return true
+	return typeof(candidate) == "string"
 end
 
 module.isNumber = function(candidate: number, allowSpecial: boolean?): boolean
@@ -36,62 +22,16 @@ module.isNumber = function(candidate: number, allowSpecial: boolean?): boolean
 	return true
 end
 
--- This function is used in the ComplexNumber module.
-module.isRawComplexNumber = function(candidate: RawComplexNumber): boolean
-	if typeof(candidate) ~= "table" then
-		return false
-	end
-	
-	if not module.isNumber(candidate.real, false) then
-		return false
-	end
-	
-	if not module.isNumber(candidate.complex, false) then
-		return false
-	end
-	
-	return true
-end
-
--- This function is used in the ComplexNumber module.
-module.isComplexNumber = function(candidate: ComplexNumber): boolean
-	if typeof(candidate) ~= "table" then
-		return false
-	end
-	
-	if getmetatable(candidate) ~= "ComplexNumber" then
-		return false
-	end
-	
-	if not module.isNumber(candidate.real, false) then
-		return false
-	end
-	
-	if not module.isNumber(candidate.complex, false) then
-		return false
-	end
-	
-	return true
-end
-
 module.isBoolean = function(candidate: boolean | nil, exclude_nil: boolean?): boolean
 	if not exclude_nil and typeof(candidate) == "nil" then
 		return true
 	end
 	
-	if typeof(candidate) == "boolean" then
-		return true
-	end
-	
-	return false
+	return typeof(candidate) == "boolean"
 end
 
 module.isTable = function(candidate: {[any]: any}): boolean
-	if typeof(candidate) ~= "table" then
-		return false
-	end
-	
-	return true
+	return typeof(candidate) == "table"
 end
 
 module.isArray = function(candidate: {[number]: any}, ignore_PrerequisiteChecks: boolean?): boolean
@@ -143,4 +83,4 @@ module.isInstance = function(candidate: Instance, classname: string?): boolean
 	return true
 end
 
-return module::typeof(module)
+return module
