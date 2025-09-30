@@ -1,5 +1,7 @@
 --!strict
 
+-- Version: 1.0.0
+
 local module = {}
 module.e = 2.718281828459045
 module.tau = 6.283185307179586

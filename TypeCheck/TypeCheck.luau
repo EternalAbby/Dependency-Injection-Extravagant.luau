@@ -1,5 +1,7 @@
 --!strict
 
+-- Version: 0.4.0
+
 local module = {}
 
 module.isString = function(candidate: string): boolean

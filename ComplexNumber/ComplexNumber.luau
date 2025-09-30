@@ -1,5 +1,7 @@
 --!strict
 
+-- Version: 1.1.1
+
 local tostring_signs = {"-", "+", "+"}
 
 local module = {}

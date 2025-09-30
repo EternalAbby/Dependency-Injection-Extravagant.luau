@@ -1,5 +1,7 @@
 --!strict
 
+-- Version: 1.1.0
+
 type Cache_Result = {
 	[any]: any
 }

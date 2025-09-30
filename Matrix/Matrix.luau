@@ -1,10 +1,14 @@
 --!strict
 
+-- Version: 1.0.0
+
 local module = {}
 
 local matrix = {}
 local static = {}
-local dynamic = {}
+
+
+-- ** TYPE DEFINITIONS ** --
 
 -- This type is used for a 2D matrix, used in math.
 export type Matrix = setmetatable<{
@@ -20,19 +24,14 @@ export type StaticMatrix = setmetatable<{
 
 type RepeatingEntry = {RepeatingEntry | number}
 
--- This type is used to create a N-dimension matrix. Can only do manual read/write. Module built-in only helps with changing sizes.
-export type DynamicMatrix = setmetatable<{
+-- This type is used to create a N-dimension matrix. Can only do manual read/write and module does not support anything.
+export type DynamicMatrix = {
 	["_entries"]: RepeatingEntry,
 	["_size"]: {[number]: number}
-}, typeof(dynamic)>
+}
 
 
 -- ** INTERNAL FUNCTIONS ** --
-
--- This function is from the TypeCheck module.
-local function isString(candidate: string): boolean
-	return typeof(candidate) == "string"
-end
 
 -- This function is from the TypeCheck module.
 local function isNumber(candidate: number): boolean
@@ -159,119 +158,65 @@ local function isStaticMatrix(candidate: StaticMatrix): boolean
 	return true
 end
 
-local function isDynamicMatrix(candidate: DynamicMatrix): boolean
-	if getmetatable(candidate) ~= "DynamicMatrix" then
-		return false
-	end
-	
-	if typeof(candidate._size) ~= "table" then
-		return false
-	end
-	
-	if typeof(candidate._entries) ~= "table" then
-		return false
-	end
-	
-	local total_layer = #candidate._size
-	
-	local function helper(cur_arr: RepeatingEntry, cur_layer: number): boolean
-		if cur_layer == total_layer then
-			local axis_val = candidate._size[cur_layer]
-			local total_entry = 0
-			
-			for idx, entry in cur_arr do
-				if not isNumber(idx) or not isNumber(entry::number) then
-					return false
-				end
-				
-				total_entry += 1
-			end
-			return axis_val == total_entry
-			
-		else
-			local axis_val = candidate._size[cur_layer]
-			local total_entry = 0
-			
-			for idx, entry in cur_arr do
-				if not isNumber(idx) or typeof(entry) ~= "table" then
-					return false
-				end
-				
-				if not helper(entry, cur_layer + 1) then
-					return false
-				end
-				
-				total_entry += 1
-			end
-			return axis_val == total_entry
-		end
-	end
-	
-	return helper(candidate._entries, 1)
-end
-
 
 -- ** CONSTRUCTORS ** --
 
-module.new = function(name: "Matrix" | "StaticMatrix" | "DynamicMatrix", fill: number, ...: number): (Matrix | StaticMatrix | DynamicMatrix)?
-	assert(isString(name))
+-- Constructor: Creates a new `Matrix` object.
+module.newMatrix = function(fill: number, m: number, n: number): Matrix
+	assert(isNumber(m))
+	assert(isNumber(n))
 	
-	local axes = {...}
+	fill = if isNumber(fill) then fill else 0
 	
-	fill = if isNumber(fill::number) or name == "DynamicMatrix" then fill::number else 0
+	local res = {}
+	res._entries = {}
+	res._size = {m, n}
 	
-	if name == "Matrix" then
-		local m, n = axes[1], axes[2]
-		
-		assert(isNumber(m))
-		assert(isNumber(n))
-		
-		local res = {}
-		res._entries = {}
-		res._size = {m, n}
-		
-		for i = 1, m do
-			res._entries[i] = table.create(n, fill)
-		end
-		
-		return setmetatable(res, matrix) :: Matrix
-		
-	elseif name == "StaticMatrix" then
-		local m, n = axes[1], axes[2]
-		
-		assert(isNumber(m))
-		assert(isNumber(n))
-		
-		local res = {}
-		res._entries = table.create(m * n, fill)
-		res._size = {m, n}
-		return setmetatable(res, static) :: StaticMatrix
-		
-	elseif name == "DynamicMatrix" then
-		local res = {}
-		
-		local function helper(cur_arr: {[number]: {} | number}, cur_idx: number): {} | number
-			if cur_idx == #axes then
-				return table.create(axes[cur_idx], fill)
-			end
-			
-			for idx = 1, axes[cur_idx] do
-				cur_arr[idx] = helper({}, cur_idx + 1)
-			end
-			
-			return cur_arr
-		end
-		
-		return setmetatable(helper(res, 1) :: {}, dynamic) :: DynamicMatrix
+	for i = 1, m do
+		res._entries[i] = table.create(n, fill)
 	end
 	
-	return nil
+	return setmetatable(res, matrix) :: Matrix
+end
+
+-- Constructor: Creates a new `StaticMatrix` object.
+module.newStatic = function(fill: number, m: number, n: number): StaticMatrix
+	assert(isNumber(m))
+	assert(isNumber(n))
+	
+	fill = if isNumber(fill) then fill else 0
+	
+	local res = {}
+	res._entries = table.create(m * n, fill)
+	res._size = {m, n}
+	return setmetatable(res, static) :: StaticMatrix
+end
+
+-- Constructor: Creates a new `DynamicMatrix` object.
+module.newDynamic = function(fill: number, ...: number): DynamicMatrix
+	local axes = {...}
+	local res = {}
+	
+	local function helper(cur_arr: {[number]: {} | number}, cur_idx: number): {} | number
+		if cur_idx == #axes then
+			return table.create(axes[cur_idx], fill)
+		end
+		
+		for idx = 1, axes[cur_idx] do
+			cur_arr[idx] = helper({}, cur_idx + 1)
+		end
+		
+		return cur_arr
+	end
+	
+	return helper(res, 1) :: DynamicMatrix
 end
 
 
 -- ** MATRIX OBJECT ** --
 -- ** MATRIX - METHODS ** --
 
+-- Method: Inserts a row at `m`. Out of bound checks are enabled by default.
 matrix.addrow = function(self: Matrix, m: number, fill: number, ignore_OOB: boolean?): boolean
 	assert(isMatrix(self))
 	assert(isNumber(m))
@@ -293,6 +238,7 @@ matrix.addrow = function(self: Matrix, m: number, fill: number, ignore_OOB: bool
 	return true
 end
 
+-- Method: Removes the row at `m`. Out of bound checks are enabled by default.
 matrix.clrrow = function(self: Matrix, m: number, ignore_OOB: boolean?): {number}
 	assert(isMatrix(self))
 	assert(isNumber(m))
@@ -311,6 +257,7 @@ matrix.clrrow = function(self: Matrix, m: number, ignore_OOB: boolean?): {number
 	return table.remove(self._entries, idx) :: any
 end
 
+-- Method: Inserts a column at `n`. Out of bound checks are enabled by default.
 matrix.addcol = function(self: Matrix, n: number, fill: number, ignore_OOB: boolean?): boolean
 	assert(isMatrix(self))
 	assert(isNumber(n))
@@ -335,6 +282,7 @@ matrix.addcol = function(self: Matrix, n: number, fill: number, ignore_OOB: bool
 	return true
 end
 
+-- Method: Removes the column at `m`. Out of bound checks are enabled by default.
 matrix.clrcol = function(self: Matrix, n: number, ignore_OOB: boolean?): {number}
 	assert(isMatrix(self))
 	assert(isNumber(n))
@@ -358,12 +306,13 @@ matrix.clrcol = function(self: Matrix, n: number, ignore_OOB: boolean?): {number
 	return ret
 end
 
+-- Method: Returns the size of the `Matrix` object.
 matrix.getsize = function(self: Matrix): {number}
 	assert(isMatrix(self))
-	
 	return self._size
 end
 
+-- Method: Sets the size of the `Matrix` object. The `fill` parameter is used to set the new entries.
 matrix.setsize = function(self: Matrix, m: number, n: number, fill: number): boolean
 	assert(isMatrix(self))
 	
@@ -399,28 +348,30 @@ matrix.setsize = function(self: Matrix, m: number, n: number, fill: number): boo
 	
 	self._size[1] = m
 	self._size[2] = n
-	
 	return true
 end
 
+-- Method: Returns the value at the entry using `m` and `n` as coordinates.
 matrix.getentry = function(self: Matrix, m: number, n: number): number
 	assert(isMatrix(self))
-	assert(isNumber(m))
-	assert(isNumber(n))
+	assert(isNumber(m) and 0 < m and m <= self._size[1])
+	assert(isNumber(n) and 0 < n and n <= self._size[2])
 	
 	return self._entries[m][n]
 end
 
+-- Method: Sets the `value` at the entry using `m` and `n` as coordinates.
 matrix.setentry = function(self: Matrix, value: number, m: number, n: number): boolean
 	assert(isMatrix(self))
 	assert(isNumber(value))
-	assert(isNumber(m))
-	assert(isNumber(n))
+	assert(isNumber(m) and 0 < m and m <= self._size[1])
+	assert(isNumber(n) and 0 < n and n <= self._size[2])
 	
 	self._entries[m][n] = value
 	return true
 end
 
+-- Method: Performs the matrix transpose operation and returns a new `Matrix` object representing the transposed matrix.
 matrix.transpose = function(self: Matrix): Matrix
 	assert(isMatrix(self))
 	
@@ -544,27 +495,29 @@ end
 -- ** STATIC MATRIX OBJECT ** --
 -- ** STATIC MATRIX - METHODS ** --
 
+-- Method: Returns the size of the `StaticMatrix` object.
 static.getsize = function(self: StaticMatrix): {number}
 	assert(isStaticMatrix(self))
-	
 	return self._size
 end
 
+-- Method: Returns the value at the entry using `m` and `n` as coordinates.
 static.getentry = function(self: StaticMatrix, m: number, n: number): number
 	assert(isStaticMatrix(self))
-	assert(isNumber(m))
-	assert(isNumber(n))
+	assert(isNumber(m) and 0 < m and m <= self._size[1])
+	assert(isNumber(n) and 0 < n and n <= self._size[2])
 	
 	local size_n = self._size[2]
 	local idx = size_n * (m - 1) + n
 	return self._entries[idx]
 end
 
+-- Method: Sets the `value` at the entry using `m` and `n` as coordinates.
 static.setentry = function(self: StaticMatrix, value: number, m: number, n: number): boolean
 	assert(isStaticMatrix(self))
 	assert(isNumber(value))
-	assert(isNumber(m))
-	assert(isNumber(n))
+	assert(isNumber(m) and 0 < m and m <= self._size[1])
+	assert(isNumber(n) and 0 < n and n <= self._size[2])
 	
 	local size_n = self._size[2]
 	local idx = size_n * (m - 1) + n
@@ -572,6 +525,7 @@ static.setentry = function(self: StaticMatrix, value: number, m: number, n: numb
 	return true
 end
 
+-- Method: Performs the matrix transpose operation and returns a new `StaticMatrix` object representing the transposed matrix.
 static.transpose = function(self: StaticMatrix): StaticMatrix
 	assert(isStaticMatrix(self))
 	
@@ -685,36 +639,5 @@ static.__mul = function(a: StaticMatrix | number, b: StaticMatrix | number): Sta
 		return setmetatable(new, static)
 	end
 end
-
-
--- ** DYNAMIC MATRIX OBJECT ** --
--- ** DYNAMIC MATRIX - METHODS ** --
-
-dynamic.getsize = function(self: DynamicMatrix): {number}
-	assert(isDynamicMatrix(self))
-	
-	return self._size
-end
-
-dynamic.getentry = function(self: DynamicMatrix, ...: number): RepeatingEntry
-	assert(isDynamicMatrix(self))
-	
-	local axes = {...}
-	local res = self._entries[axes[1]] :: {any}
-	
-	for i = 2, #axes do
-		assert(isNumber(axes[i]))
-		res = res[axes[i]]
-	end
-	
-	return res
-end
-
-
--- ** DYNAMIC MATRIX - METATABLE ** --
-
-dynamic.__index = dynamic
-
-dynamic.__metatable = "DynamicMatrix"
 
 return module
