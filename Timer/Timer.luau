@@ -225,13 +225,13 @@ module.SetDuration = function(self: Timer, seconds: number): boolean
 	return true
 end
 
--- Method: Checks whether the `Timer` object is running.
+-- Method: Checks whether the `Timer` object is in its Active state.
 module.IsActive = function(self: Timer): boolean
 	assert(module.isTimer(self), `Failed to perform \`:IsActive()\` method. Attempted to perform operation using an invalid <Timer> object.`)
 	return self._isActive and os.clock() < self._stopTime
 end
 
--- Method: Checks whether the `Timer` object has ended.
+-- Method: Checks whether the `Timer` object is in its Inactive state.
 module.IsInactive = function(self: Timer): boolean
 	assert(module.isTimer(self), `Failed to perform \`:IsInactive()\` method. Attempted to perform operation using an invalid <Timer> object.`)
 	if self._pauseTime == -1 and os.clock() >= self._stopTime then
@@ -240,6 +240,11 @@ module.IsInactive = function(self: Timer): boolean
 	return self._pauseTime == -1 and not self._isActive
 end
 
+-- Method: Checks whether the `Timer` object is in its Paused state.
+module.IsPaused = function(self: Timer): boolean
+	assert(module.isTimer(self), `Failed to perform \`:IsPaused()\` method. Attempted to perform operation using an invalid <Timer> object.`)
+	return self._pauseTime ~= -1 and not self._isActive
+end
 
 -- ** METAMETHODS ** --
 
