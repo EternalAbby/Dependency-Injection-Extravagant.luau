@@ -7,15 +7,15 @@ This repository includes many utility modules for the [Roblox Studio](https://cr
 This repository is made with the intent of;
 > "Create it yourself or DIE"
 
-Along with being very simple to use.
+Along with being very simple to use. **Feel free to use any modules from here within your project!**
 
-**Feel free to use any modules from here within your project!**
+# WHAT wiki
+
+For information and documentation for this repository, you can check out the [WHAT](https://github.com/EternalAbby/Dependency-Injection-Extravagant.luau/wiki) wiki. This is located in the Wiki section of the repository.
 
 # Instructions
 
-There are 2 main methods to download modules from this repository: individual and group.
-
-After downloading, make sure to check out [WHAT](https://github.com/EternalAbby/Dependency-Injection-Extravagant.luau/wiki), a Wiki for DIE. This is located in the Wiki section of the repository.
+There are 2 main methods to download modules from this repository: individual and group. You can choose whichever you find more convenient.
 
 ## Individual download
 
