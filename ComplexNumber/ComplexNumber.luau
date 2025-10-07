@@ -1,6 +1,6 @@
 --!strict
 
--- Version: 1.1.1
+-- Version: 1.1.2
 
 local tostring_signs = {"-", "+", "+"}
 
@@ -72,35 +72,38 @@ end
 
 -- This is a wrapper function for type error handling.
 local function ThrowTypeError(expected_type: string, arg_name: string, arg_idx: number, arg_val: any): nil
-	error(`--------------------\
-	Error: Failed to perform \`{debug.info(4, "n")}\`.\
-	Reason: A type error occurred when running the function.\
-	Expected: <{expected_type}> type for \`{arg_name}\` (arg #{arg_idx}).\
-	Cause: Received <{typeof(arg_val)}> type.\
-	--------------------`
-)
+	error(`\
+		--------------------\
+		Error: Failed to perform \`{debug.info(3, "n")}\`.\
+		Reason: A type error occurred when running the function.\
+		Expected: <{expected_type}> type for \`{arg_name}\` (arg #{arg_idx}).\
+		Cause: Received <{typeof(arg_val)}> type.\
+		--------------------`
+	)
 end
 
 -- This is a wrapper function for division by 0 error handling. This appears in complex division and exponentiation.
 local function ThrowDivisionBy0Error(arg_name: string, arg_idx: number): nil
-	error(`--------------------\
-	Error: Failed to perform \`{debug.info(4, "n")}\`.\
-	Reason: Attempted to perform division by 0.\
-	Expected: Non-zero complex number for \`{arg_name}\` (arg #{arg_idx}).\
-	Cause: Argument is equal to 0.\
-	--------------------`
-)
+	error(`\
+		--------------------\
+		Error: Failed to perform \`{debug.info(3, "n")}\`.\
+		Reason: Attempted to perform division by 0.\
+		Expected: Non-zero complex number for \`{arg_name}\` (arg #{arg_idx}).\
+		Cause: Argument is equal to 0.\
+		--------------------`
+	)
 end
 
 -- This is a wrapper function for undefined limit error handling. This only appear in complex exponentiation.
 local function ThrowUndefinedLimitError(arg_name: string, arg_idx: number): nil
-	error(`--------------------\
-	Error: Failed to perform \`{debug.info(4, "n")}\`.\
-	Reason: Undefined limit for purely imaginary exponent.\
-	Expected: Non-purely imaginary complex number for \`{arg_name}\` (arg #{arg_idx}).\
-	Cause: Argument only has complex component.\
-	--------------------`
-)
+	error(`\
+		--------------------\
+		Error: Failed to perform \`{debug.info(3, "n")}\`.\
+		Reason: Undefined limit for purely imaginary exponent.\
+		Expected: Non-purely imaginary complex number for \`{arg_name}\` (arg #{arg_idx}).\
+		Cause: Argument only has complex component.\
+		--------------------`
+	)
 end
 
 -- Checks the type of candidate using provided check functions from <...>. These functions are the internal check functions. Returned strings are limited by available checks.
@@ -124,9 +127,9 @@ local function AnalyzeType(candidate: AnyNumber, expected_type: string, arg_name
 	return typ :: any
 end
 
--- Checks an expression and throw an error message using <err_func>. This is equivalent to assert(), except the string is not formatted prior to call.
+-- Checks an expression and throw an error message using <err_func>. This is similar to assert(), except the string is not formatted prior to call.
 local function Check(expression: boolean, err_func: (...any) -> nil, ...: any): nil
-	if not expression then
+	if expression then
 		err_func(...)
 	end
 	return nil
