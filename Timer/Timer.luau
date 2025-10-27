@@ -42,15 +42,45 @@ local function isNumber(candidate: number): boolean
 	return true
 end
 
+-- This is a wrapper function for type error handling.
+local function ThrowTypeError(expected_type: string, arg_name: string, arg_idx: number, arg_val: any): nil
+	error(`\
+		--------------------\
+		Error: Failed to perform \`{debug.info(2, "n")}\`.\
+		Reason: A type error occurred when running the function.\
+		Expected: <{expected_type}> type for \`{arg_name}\` (arg #{arg_idx}).\
+		Cause: Received <{typeof(arg_val)}> type.\
+		--------------------`
+	)
+end
+
+local function ThrowExistingTimerError()
+	error(`\
+		--------------------\
+		Error: Failed to perform \`{debug.info(2, "n")}\`.\
+		Reason: Attempted to create a \`Timer\` object with an existing <id>.\
+		Expected: \
+		Cause: \
+		--------------------`
+	)
+end
+
+-- Checks an expression and throw an error message using <err_func>. This is similar to assert(), except the string is not formatted prior to call.
+local function Check(expression: boolean, err_func: (...any) -> nil, ...: any): nil
+	if expression then
+		err_func(...)
+	end
+	return nil
+end
 
 -- ** CONSTRUCTORS ** --
 
 --[[
 Constructor: Creates a new `Timer` object.
-<id> must not collide with a pre-existing <Timer> object.
+<id> must not collide with a pre-existing `Timer` object.
 ]]
 module.new = function(id: TimerId, duration: number, protected: boolean?): Timer
-	assert(isNumber(id::number) or isString(id::string), `Failed to perform \`.new()\` constructor. Attempted to set <id> to an invalid type. Expected <string> or <number> type, got <{typeof(id)}>.`)
+	Check(isNumber(id::number) or isString(id::string), ThrowTypeError, "TimerId", "id", 1, id)
 	assert(not module.hasTimer(id), `Failed to perform \`.new()\` constructor. Attempted to set <id> to a pre-existing <Timer> object.`)
 	assert(isNumber(duration), `Failed to perform \`.new()\` constructor. Attempted to set <duration> to an invalid type. Expected <number> type, got <{typeof(duration)}>.`)
 	assert(duration > 0, `Failed to perform \`.new()\` constructor. Attempted to set <duration> to a non-positive number, got {duration}.`)
