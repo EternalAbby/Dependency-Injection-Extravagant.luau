@@ -1,6 +1,11 @@
 --!strict
+--!optimize 2
+--!native
 
--- Version: 0.4.0
+-- DEPRECATED NOTICE --
+-- There are better alternatives.
+
+-- Version: 0.4.1
 
 local module = {}
 
@@ -39,12 +44,12 @@ module.isArray = function(candidate: {[number]: any}, ignore_PrerequisiteChecks:
 		return false
 	end
 	
-	local lastkey = nil
+	local lastKey = nil
 	
 	while true do
-		local key, _ = next(candidate, lastkey)
+		local key, _ = next(candidate, lastKey)
 		
-		if lastkey and key and key ~= lastkey + 1 then
+		if lastKey and key and key ~= lastKey + 1 then
 			return false
 			
 		elseif not key then
@@ -52,7 +57,7 @@ module.isArray = function(candidate: {[number]: any}, ignore_PrerequisiteChecks:
 			
 		end
 		
-		lastkey = key
+		lastKey = key
 	end
 	
 	return true
