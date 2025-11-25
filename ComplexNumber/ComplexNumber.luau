@@ -1,4 +1,6 @@
 --!strict
+--!optimize 2
+--!native
 
 -- Version: 1.1.3
 
@@ -11,13 +13,10 @@ type RawComplexOnly = RawComplexNumber | number
 type ObjectOnly = ComplexNumber | RawComplexNumber
 
 type raw_tostring_representation = "general" | "rectangular" | "polar" | "euler"
-type index_table = ComplexNumber_Function & ComplexNumber_Method & ComplexNumber_RawMethod
+type index_table = ComplexNumber_Method & ComplexNumber_RawMethod
 
 type ObjectTypes = "ComplexNumber" | "RawComplexNumber" | "ObjectOnly" | "number"
 
-type ComplexNumber_Function = {
-	cis: (theta: number) -> ComplexNumber
-}
 type ComplexNumber_Method = {
 	clone: (self: ComplexNumber) -> ComplexNumber,
 	magnitude: (self: ComplexNumber) -> number,
@@ -69,6 +68,7 @@ type ComplexNumber_Meta = {
 	__len: (self: ComplexNumber) -> number,
 	__tostring: (self: ComplexNumber) -> string
 }
+
 export type RawComplexNumber = {
 	real: number,
 	complex: number
@@ -83,7 +83,9 @@ export type Module = {
 	complex_unit: () -> ComplexNumber,
 	
 	fromRaw: (raw: RawComplexNumber) -> ComplexNumber,
-	fromPolar: (magnitude: number, argument: number) -> ComplexNumber
+	fromPolar: (magnitude: number, argument: number) -> ComplexNumber,
+	
+	cis: (theta: number) -> ComplexNumber
 }
 
 
@@ -569,7 +571,7 @@ end
 	Function: Computes the trigonometric function `cis(theta)` with angle <theta> (in radians).
 	Equivalent to computing 'cos(theta) + i sin(theta)', or Euler's formula.
 ]]
-index_table.cis = function(theta: number): ComplexNumber
+module.cis = function(theta: number): ComplexNumber
 	AnalyzeType(theta, "number", "theta", 1, isNumber)
 	return setmetatable({
 		real = math.cos(theta),
