@@ -2,6 +2,8 @@
 --!optimize 2
 --!native
 
+-- TODO: Add support for `nan` and `inf`.
+
 -- Version: 1.1.3
 
 
