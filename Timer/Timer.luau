@@ -56,9 +56,7 @@ export type Timer = setmetatable<{
 	protected: boolean
 }, Timer_Meta>
 
-type TimerStorage = {
-	[Timer_Identifier]: Timer
-}
+type TimerStorage = {[Timer_Identifier]: Timer}
 
 type Module = {
 	new: (id: Timer_Identifier, duration: number, protected: boolean?) -> Timer,

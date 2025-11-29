@@ -65,9 +65,7 @@ export type Timer = setmetatable<{
 	protected: boolean,
 }, Timer_Meta>
 
-type TimerStorage = {
-	[Timer_Identifier]: Timer
-}
+type TimerStorage = {[Timer_Identifier]: Timer}
 
 type Module = {
 	new: (id: Timer_Identifier, duration: number, protected: boolean?) -> Timer,
@@ -243,14 +241,16 @@ index_table.Stop = function(self: Timer): nil
 end
 
 index_table.GetCurrentTime = function(self: Timer): number
+	local currentTime = os.clock()
+	
 	Check(module.isTimer(self), ThrowTimerOperationError)
 	
-	if os.clock() >= self.stopTime then
+	if currentTime >= self.stopTime then
 		self.isActive = false
 	end
 	
 	if self.isActive then
-		return self.stopTime - os.clock()
+		return self.stopTime - currentTime
 		
 	elseif self.pauseTime ~= -1 then
 		return self.stopTime - self.pauseTime
@@ -276,20 +276,28 @@ index_table.UnmarkTimestamp = function(self: Timer, timestamp: number): nil
 end
 
 index_table.IsActive = function(self: Timer): boolean
+	local currentTime = os.clock()
+	
 	Check(module.isTimer(self), ThrowTimerOperationError)
-	return self.isActive and os.clock() < self.stopTime
+	
+	return self.isActive and currentTime < self.stopTime
 end
 
 index_table.IsInactive = function(self: Timer): boolean
+	local currentTime = os.clock()
+	
 	Check(module.isTimer(self), ThrowTimerOperationError)
-	if self.pauseTime == -1 and os.clock() >= self.stopTime then
+	
+	if self.pauseTime == -1 and currentTime >= self.stopTime then
 		self.isActive = false
 	end
+	
 	return self.pauseTime == -1 and not self.isActive
 end
 
 index_table.IsPaused = function(self: Timer): boolean
 	Check(module.isTimer(self), ThrowTimerOperationError)
+	
 	return self.pauseTime ~= -1 and not self.isActive
 end
 
