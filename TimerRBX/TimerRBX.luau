@@ -7,6 +7,7 @@
 -- TODO: [VERSION 1.0.0] Add user-defined function descriptions.
 
 -- TODO: [VERSION 1.1.0] Implement internal storage for Timer properties. In case of any malicious/false modifications from the user. Change source code to use them instead of the ones that is public.
+-- TODO: [VERSION 1.1.0] Implement Timer object reset function.
 -- TODO: [VERSION 1.1.0] Implement server-protected and client-protected Timer. Splitting `protected` property into 2. Server-protected will act similarly to current `protected`. Client-protected will prevent client-sided destruction of Timer.
 -- TODO: [VERSION 1.1.0] Implement object pooling for RemoteEvents.
 
@@ -259,7 +260,7 @@ end
 
 index_table.SetDuration = function(self: Timer, seconds: number): nil
 	Check(module.isTimer(self), ThrowTimerOperationError)
-	Check(isNumber(seconds), ThrowTypeError, "number" ,"seconds", 2, seconds)
+	Check(isNumber(seconds), ThrowTypeError, "number", "seconds", 2, seconds)
 	Check(seconds > 0, ThrowDurationError, seconds, 2)
 	
 	self.duration = seconds

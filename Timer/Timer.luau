@@ -1,45 +1,85 @@
 --!strict
+--!optimize 2
+--!native
 
--- Version: 1.1.0
+-- TODO: [VERSION 1.2.0] Add user-defined function descriptions.
 
-local module = {}
+-- TODO: [VERSION 1.3.0] Implement internal storage for Timer properties. In case of any malicious/false modifications from the user. Change source code to use them instead of the ones that is public.
+-- TODO: [VERSION 1.3.0] Implement Timer object reset function.
 
+-- Version: 1.2.0
 
--- ** TYPE DEFINITIONS ** --
+-- INTERNAL VARIABLE --
 
-type TimerId = string | number
-type TimerStorage = {[TimerId]: Timer}
-
-export type Timer = setmetatable<{
-	_duration: number,
-	_startTime: number,
-	_stopTime: number,
-	_pauseTime: number,
-	_isActive: boolean,
-	_id: TimerId,
-	_protected: boolean
-}, typeof(module)>
-
-local protected_timer: TimerStorage = {}
 local storage: TimerStorage = {}
+local protected_storage: TimerStorage = {}
+
+local index_table: Timer_Method = {} :: Timer_Method
+local timer_meta: Timer_Meta = {} :: Timer_Meta
+
+local module: Module = {} :: Module
 
 
--- ** INTERNAL FUNCTIONS ** --
+-- TYPE DEFINITION --
+
+type Timer_Identifier = string | number
+
+type Timer_Method = {
+	Start: (self: Timer) -> nil,
+	Resume: (self: Timer) -> nil,
+	Pause: (self: Timer) -> nil,
+	Stop: (self: Timer) -> nil,
+	
+	GetCurrentTime: (self: Timer) -> number,
+	SetDuration: (self: Timer, seconds: number) -> nil,
+	
+	IsActive: (self: Timer) -> boolean,
+	IsInactive: (self: Timer) -> boolean,
+	IsPaused: (self: Timer) -> boolean
+}
+type Timer_Meta = {
+	__index: Timer_Method,
+	__newindex: () -> nil,
+	__metatable: "Timer",
+	__tostring: (self: Timer) -> string
+}
+export type Timer = setmetatable<{
+	duration: number,
+	
+	startTime: number,
+	stopTime: number,
+	pauseTime: number,
+	
+	isActive: boolean,
+	
+	id: Timer_Identifier,
+	protected: boolean
+}, Timer_Meta>
+
+type TimerStorage = {
+	[Timer_Identifier]: Timer
+}
+
+type Module = {
+	new: (id: Timer_Identifier, duration: number, protected: boolean?) -> Timer,
+	destroy: (id: Timer_Identifier) -> nil,
+	hasTimer: (id: Timer_Identifier) -> boolean,
+	isTimer: (candidate: Timer) -> boolean
+}
+
+
+-- HELPER FUNCTION --
 
 local function isString(candidate: string): boolean
 	return typeof(candidate) == "string"
 end
 
 local function isNumber(candidate: number): boolean
-	if typeof(candidate) ~= "number" then
-		return false
-	end
-	
-	if candidate ~= candidate or math.abs(candidate) == math.huge then
-		return false
-	end
-	
-	return true
+	return typeof(candidate) == "number" and candidate == candidate and candidate ~= math.huge and candidate ~= -math.huge
+end
+
+local function isTimerId(candidate: Timer_Identifier): boolean
+	return isString(candidate::string) or isNumber(candidate::number)
 end
 
 -- This is a wrapper function for type error handling.
@@ -54,15 +94,52 @@ local function ThrowTypeError(expected_type: string, arg_name: string, arg_idx: 
 	)
 end
 
-local function ThrowExistingTimerError()
+local function ThrowExistingTimerError(arg_idx: number, arg_val: any): nil
 	error(`\
 		--------------------\
 		Error: Failed to perform \`{debug.info(2, "n")}\`.\
-		Reason: Attempted to create a \`Timer\` object with an existing <id>.\
-		Expected: \
-		Cause: \
+		Reason: Attempted to create a \`Timer\` object with an existing <TimerId>.\
+		Expected: Unique \`TimerId\` per \`Timer\` object for \`id\` (arg #{arg_idx}).\
+		Cause: Received {arg_val}.\
 		--------------------`
 	)
+end
+
+local function ThrowDurationError(arg_idx: number, arg_val: any): nil
+	error(`\
+		--------------------\
+		Error: Failed to perform \`{debug.info(2, "n")}\`.\
+		Reason: Attempted to set <duration> to a non-positive number.\
+		Expected: <duration> must be a positive number for \`duration\` (arg #{arg_idx}).\
+		Cause: Received {arg_val}.\
+		--------------------`
+	)
+end
+
+local function ThrowProtectedError(arg_idx: number, arg_val: any): nil
+	error(`\
+		--------------------\
+		Error: Failed to perform \`{debug.info(2, "n")}\`.\
+		Reason: Attempted to remove a protected \`Timer\` object.\
+		Expected: Cannot remove a protected \`Timer\` object.\
+		Cause: Attempted to remove \`Timer\` object with TimerId {arg_val} (arg #{arg_idx}).\
+		--------------------`
+	)
+end
+
+local function ThrowTimerOperationError(): nil
+	error(`\
+		--------------------\
+		Error: Failed to perform \`{debug.info(2, "n")}\`.\
+		Reason: Attempted to do perform Timer operation on an invalid \`Timer\` object.\
+		Expected: Object to be a \`Timer\` object.\
+		Cause: Provided object is not a \`Timer\` object.\
+		--------------------`
+	)
+end
+
+local function FormatDigit(n: number, digits: number): string
+	return (`%0{digits}i`::any):format(tostring(n))
 end
 
 -- Checks an expression and throw an error message using <err_func>. This is similar to assert(), except the string is not formatted prior to call.
@@ -73,217 +150,207 @@ local function Check(expression: boolean, err_func: (...any) -> nil, ...: any): 
 	return nil
 end
 
--- ** CONSTRUCTORS ** --
 
---[[
-Constructor: Creates a new `Timer` object.
-<id> must not collide with a pre-existing `Timer` object.
-]]
-module.new = function(id: TimerId, duration: number, protected: boolean?): Timer
-	Check(isNumber(id::number) or isString(id::string), ThrowTypeError, "TimerId", "id", 1, id)
-	assert(not module.hasTimer(id), `Failed to perform \`.new()\` constructor. Attempted to set <id> to a pre-existing <Timer> object.`)
-	assert(isNumber(duration), `Failed to perform \`.new()\` constructor. Attempted to set <duration> to an invalid type. Expected <number> type, got <{typeof(duration)}>.`)
-	assert(duration > 0, `Failed to perform \`.new()\` constructor. Attempted to set <duration> to a non-positive number, got {duration}.`)
+-- METHOD --
+
+index_table.Start = function(self: Timer): nil
+	local currentTime = os.clock()
 	
-	local new = {}
-	new._duration = duration
-	new._startTime = -1
-	new._stopTime = -1
-	new._pauseTime = -1
-	new._id = id
-	new._isActive = false
-	new._protected = if protected then protected else false
+	Check(module.isTimer(self), ThrowTimerOperationError)
 	
-	storage[id] = setmetatable(new, module)
-	protected_timer[id] = if protected then storage[id] else nil
-	return storage[id]
+	self.startTime = currentTime
+	self.stopTime = currentTime + self.duration
+	self.pauseTime = -1
+	self.isActive = true
+	return nil
 end
 
+index_table.Resume = function(self: Timer): nil
+	local currentTime = os.clock()
+	
+	Check(module.isTimer(self), ThrowTimerOperationError)
+	
+	if self.isActive or self.startTime == -1 or self.stopTime == -1 or self.pauseTime == -1 then
+		return nil
+	end
+	
+	self.stopTime += currentTime - self.pauseTime
+	self.pauseTime = -1
+	self.isActive = true
+	return nil
+end
 
--- ** FUNCTIONS ** --
+index_table.Pause = function(self: Timer): nil
+	local currentTime = os.clock()
+	
+	Check(module.isTimer(self), ThrowTimerOperationError)
+	
+	if not self.isActive then
+		return nil
+	end
+	
+	self.pauseTime = currentTime
+	self.isActive = false
+	return nil
+end
 
---[[
-Function: Removes the <Timer> object by using <id>.
-Returns a boolean to determine whether the <Timer> object existed.
-]]
-module.remove = function(id: TimerId): boolean
-	assert(isNumber(id::number) or isString(id::string), `Failed to perform \`.remove()\` function. Attempted to find a <Timer> object with an invalid <TimerId> type. Expected <string> or <number> type, got <{typeof(id)}>.`)
-	assert(not protected_timer[id], `Failed to perform \`.remove()\` function. Attempted to remove a protected <Timer> object.`)
-	if storage[id] then
-		local to_remove = storage[id]
-		to_remove._duration = nil :: any
-		to_remove._startTime = nil :: any
-		to_remove._stopTime = nil :: any
-		to_remove._pauseTime = nil :: any
-		to_remove._id = nil :: any
-		to_remove._isActive = nil :: any
-		to_remove._protected = nil :: any
+index_table.Stop = function(self: Timer): nil
+	Check(module.isTimer(self), ThrowTimerOperationError)
+	
+	if self.startTime == -1 and self.stopTime == -1 and self.pauseTime == -1 and not self.isActive then
+		return nil
+	end
+	
+	self.startTime = -1
+	self.stopTime = -1
+	self.pauseTime = -1
+	self.isActive = false
+	return nil
+end
+
+index_table.GetCurrentTime = function(self: Timer): number
+	local currentTime = os.clock()
+	
+	Check(module.isTimer(self), ThrowTimerOperationError)
+	
+	if currentTime >= self.stopTime then
+		self.isActive = false
+	end
+	
+	if self.isActive then
+		return self.stopTime - currentTime
 		
-		storage[id] = nil
-		return true
-	end
-	return false
-end
-
---[[
-Function: Gets the <Timer> object by using <id>.
-Returns the <Timer> object if found, otherwise returns `nil`.
-]]
-module.getTimer = function(id: TimerId): Timer?
-	assert(isNumber(id::number) or isString(id::string), `Failed to perform \`.getTimer()\` function. Attempted to find a <Timer> object with an invalid <TimerId> type. Expected <string> or <number> type, got <{typeof(id)}>.`)
-	return storage[id]
-end
-
---[[
-Function: Checks whether a <Timer> object with <id> exists.
-Returns a boolean to determine whether the <Timer> object existed.
-]]
-module.hasTimer = function(id: TimerId): boolean
-	assert(isNumber(id::number) or isString(id::string), `Failed to perform \`.hasTimer()\` function. Attempted to find a <Timer> object with an invalid <TimerId> type. Expected <string> or <number> type, got <{typeof(id)}>.`)
-	return storage[id] ~= nil
-end
-
---[[
-Function: Determines if the <candidate> is a valid <Timer> object.
-This function checks the memory of <candidate> using an internal storage in the module.
-]]
-module.isTimer = function(candidate: Timer): boolean
-	return typeof(candidate) == "table" and storage[candidate._id] == candidate
-end
-
-
--- ** METHODS ** --
-
---[[
-Method: Starts the `Timer` object.
-This method simulates the `Timer` object.
-]]
-module.Start = function(self: Timer): boolean
-	local start = os.clock()
-	
-	assert(module.isTimer(self), `Failed to perform \`:Start()\` method. Attempted to start an invalid <Timer> object.`)
-	
-	self._startTime = start
-	self._stopTime = start + self._duration
-	self._pauseTime = -1
-	self._isActive = true
-	return true
-end
-
---[[
-Method: Resumes the `Timer` object.
-This method simulates the `Timer` object.
-]]
-module.Resume = function(self: Timer): boolean
-	assert(module.isTimer(self), `Failed to perform \`:Resume()\` method. Attempted to resume an invalid <Timer> object.`)
-	
-	if self._isActive or self._startTime == -1 or self._stopTime == -1 or self._pauseTime == -1 then
-		return false
-	end
-	
-	self._stopTime += os.clock() - self._pauseTime
-	self._pauseTime = -1
-	self._isActive = true
-	return true
-end
-
---[[
-Method: Pauses the `Timer` object.
-This method simulates the `Timer` object.
-]]
-module.Pause = function(self: Timer): boolean
-	local pause = os.clock()
-	
-	assert(module.isTimer(self), `Failed to perform \`:Pause()\` method. Attempted to pause an invalid <Timer> object.`)
-	
-	if not self._isActive then
-		return false
-	end
-	
-	self._pauseTime = pause
-	self._isActive = false
-	return true
-end
-
---[[
-Method: Stops the `Timer` object.
-This method simulates the `Timer` object.
-]]
-module.Stop = function(self: Timer): boolean
-	assert(module.isTimer(self), `Failed to perform \`:Stop()\` method. Attempted to stop an invalid <Timer> object.`)
-	
-	if self._startTime == -1 and self._stopTime == -1 and self._pauseTime == -1 and not self._isActive then
-		return false
-	end
-	
-	self._startTime = -1
-	self._stopTime = -1
-	self._pauseTime = -1
-	self._isActive = false
-	return true
-end
-
---[[
-Method: Returns the current time remaining of the `Timer` object.
-If the `Timer` object is not active, returns `-1`.
-]]
-module.GetCurrentTime = function(self: Timer): number
-	assert(module.isTimer(self), `Failed to perform \`:GetCurrentTime()\` method. Attempted to perform operation using an invalid <Timer> object.`)
-	
-	if os.clock() >= self._stopTime then
-		self._isActive = false
-	end
-	
-	if self._isActive then
-		return self._stopTime - os.clock()
-		
-	elseif self._pauseTime ~= -1 then
-		return self._stopTime - self._pauseTime
+	elseif self.pauseTime ~= -1 then
+		return self.stopTime - self.pauseTime
 	end
 	return -1
 end
 
---[[
-Method: Sets the duration of the `Timer` object to the amount in <seconds>.
-If the <Timer> object is running, this method does not affect it.
-]]
-module.SetDuration = function(self: Timer, seconds: number): boolean
-	assert(module.isTimer(self), `Failed to perform \`:SetDuration()\` method. Attempted to perform operation using an invalid <Timer> object.`)
-	assert(isNumber(seconds), `Failed to perform \`:SetDuration()\` method. Attempted to set <duration> to an invalid type. Expected <number> type, got <{typeof(seconds)}>.`)
-	assert(seconds > 0, `Failed to perform \`:SetDuration()\` method. Attempted to set <duration> to a non-positive number, got {seconds}.`)
-	self._duration = seconds
-	return true
+index_table.SetDuration = function(self: Timer, seconds: number): nil
+	Check(module.isTimer(self), ThrowTimerOperationError)
+	Check(isNumber(seconds), ThrowTypeError, "number", "seconds", 2, seconds)
+	Check(seconds > 0, ThrowDurationError, seconds, 2)
+	self.duration = seconds
+	return nil
 end
 
--- Method: Checks whether the `Timer` object is in its Active state.
-module.IsActive = function(self: Timer): boolean
-	assert(module.isTimer(self), `Failed to perform \`:IsActive()\` method. Attempted to perform operation using an invalid <Timer> object.`)
-	return self._isActive and os.clock() < self._stopTime
+index_table.IsActive = function(self: Timer): boolean
+	local currentTime = os.clock()
+	
+	Check(module.isTimer(self), ThrowTimerOperationError)
+	
+	return self.isActive and currentTime < self.stopTime
 end
 
--- Method: Checks whether the `Timer` object is in its Inactive state.
-module.IsInactive = function(self: Timer): boolean
-	assert(module.isTimer(self), `Failed to perform \`:IsInactive()\` method. Attempted to perform operation using an invalid <Timer> object.`)
-	if self._pauseTime == -1 and os.clock() >= self._stopTime then
-		self._isActive = false
+index_table.IsInactive = function(self: Timer): boolean
+	local currentTime = os.clock()
+	
+	Check(module.isTimer(self), ThrowTimerOperationError)
+	
+	if self.pauseTime == -1 and currentTime >= self.stopTime then
+		self.isActive = false
 	end
-	return self._pauseTime == -1 and not self._isActive
+	
+	return self.pauseTime == -1 and not self.isActive
 end
 
--- Method: Checks whether the `Timer` object is in its Paused state.
-module.IsPaused = function(self: Timer): boolean
-	assert(module.isTimer(self), `Failed to perform \`:IsPaused()\` method. Attempted to perform operation using an invalid <Timer> object.`)
-	return self._pauseTime ~= -1 and not self._isActive
+index_table.IsPaused = function(self: Timer): boolean
+	Check(module.isTimer(self), ThrowTimerOperationError)
+	
+	return self.pauseTime ~= -1 and not self.isActive
 end
 
--- ** METAMETHODS ** --
+index_table = index_table :: Timer_Method
 
-module.__index = module
 
-module.__newindex = function(self: Timer, key: any, value: any): nil
+-- METATABLE --
+
+timer_meta.__index = index_table
+timer_meta.__newindex = function(self: Timer, key: any, value: any): nil
 	error(`Attempted to create a new index/key in <Timer> object.\nObject representation: {self}\nIndex/Key: {key}\nValue: {value}`)
 end
+timer_meta.__metatable = "Timer"
+timer_meta.__tostring = function(self: Timer): string
+	-- Converts the current time into HH:MM:SS.SSS format. If it is inactive or unknown, returns 00:00:00.000 by default.
+	
+	local timerTime = self:GetCurrentTime()
+	
+	if timerTime == -1 then
+		return "00:00:00.000"
+	end
+	
+	local hours, minutes, seconds
+	
+	hours, timerTime = timerTime // 216000, timerTime % 216000
+	minutes, timerTime = timerTime // 3600, timerTime % 3600
+	seconds, timerTime = timerTime // 60, timerTime % 60
+	
+	hours = FormatDigit(hours, 2)
+	minutes = FormatDigit(minutes, 2)
+	seconds = FormatDigit(seconds, 2)
+	timerTime = FormatDigit(timerTime, 3)
+	
+	return `{hours}:{minutes}:{seconds}:{timerTime}`
+end
 
-module.__metatable = "Timer"
+timer_meta = timer_meta :: Timer_Meta
+
+
+-- MODULE --
+
+module = {
+	new = function(id: Timer_Identifier, duration: number, protected: boolean?): Timer
+		Check(isTimerId(id), ThrowTypeError, "TimerId", "id", 1, id)
+		Check(not module.hasTimer(id), ThrowExistingTimerError, id, 1)
+		Check(isNumber(duration), ThrowTypeError, "number" ,"duration", 2, duration)
+		Check(duration > 0, ThrowDurationError, duration, 2)
+		
+		local self: Timer = setmetatable({
+			duration = duration,
+			
+			startTime = -1,
+			stopTime = -1,
+			pauseTime = -1,
+			
+			isActive = false,
+			
+			id = id,
+			protected = if protected then protected else false
+		}, timer_meta)
+		
+		storage[id] = self
+		return self
+	end,
+	
+	destroy = function(id: Timer_Identifier): nil
+		Check(isTimerId(id), ThrowTypeError, "TimerId", "id", 1, id)
+		Check(not protected_storage[id], ThrowProtectedError, 1, id)
+		
+		local object = storage[id]
+		
+		object.duration = nil :: any
+		
+		object.startTime = nil :: any
+		object.stopTime = nil :: any
+		object.pauseTime = nil :: any
+		
+		object.isActive = nil :: any
+		
+		object.id = nil :: any
+		object.protected = nil :: any
+		
+		storage[id] = nil
+		return nil
+	end,
+	
+	hasTimer = function(id: Timer_Identifier): boolean
+		Check(isTimerId(id), ThrowTypeError, "TimerId", "id", 1, id)
+		return storage[id] ~= nil
+	end,
+	
+	isTimer = function(candidate: Timer): boolean
+		return typeof(candidate) == "table" and storage[candidate.id] == candidate
+	end
+}
 
 return module
