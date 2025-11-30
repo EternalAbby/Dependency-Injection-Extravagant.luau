@@ -1,6 +1,6 @@
 --!strict
 
--- TODO: Optimize `is_prime()` trial division.
+-- TODO: [VERSION 1.0.2] Optimize `is_prime()` trial division. Using the property where primes may only appear in 6x - 1 or 6x + 1.
 
 -- Version: 1.0.1
 
