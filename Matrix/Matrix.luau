@@ -1,6 +1,16 @@
 --!strict
 
--- Version: 1.0.0
+-- TODO: [VERSION 1.1.0] Rewrite the structure of the objects.
+
+-- TODO: [VERSION 1.1.0] In .newMatrix(), Allow <fill> parameter to be a 2D array of numbers.
+-- TODO: [VERSION 1.1.0] In .newStatic(), Allow <fill> parameter to be a 1D array of numbers.
+-- TODO: [VERSION 1.1.0] In .newDynamic(), Allow <fill> parameter to be a ND array of numbers.
+-- TODO: [VERSION 1.1.0] Out of bounds defaults to 0.
+
+-- TODO: [VERSION 1.1.0] Implement special operations that only work for Square Matrix objects.
+-- TODO: [VERSION 1.1.0] Add error handling messages. Use helper functions to simplify message format.
+
+-- Version: 1.1.0
 
 local module = {}
 
@@ -12,40 +22,32 @@ local static = {}
 
 -- This type is used for a 2D matrix, used in math.
 export type Matrix = setmetatable<{
-	["_entries"]: {[number]: {number}},
-	["_size"]: {[number]: number}
+	_entries: {[number]: {number}},
+	_size: {[number]: number}
 }, typeof(matrix)>
 
 -- This type is used for a 2D matrix, but stored as a 1D array, and size cannot be changed.
 export type StaticMatrix = setmetatable<{
-	["_entries"]: {[number]: number},
-	["_size"]: {[number]: number}
+	_entries: {[number]: number},
+	_size: {[number]: number}
 }, typeof(static)>
 
 type RepeatingEntry = {RepeatingEntry | number}
 
 -- This type is used to create a N-dimension matrix. Can only do manual read/write and module does not support anything.
 export type DynamicMatrix = {
-	["_entries"]: RepeatingEntry,
-	["_size"]: {[number]: number}
+	_entries: RepeatingEntry,
+	_size: {[number]: number}
 }
 
 
 -- ** INTERNAL FUNCTIONS ** --
 
--- This function is from the TypeCheck module.
 local function isNumber(candidate: number): boolean
-	if typeof(candidate) ~= "number" then
-		return false
-	end
-	
-	if candidate ~= candidate or math.abs(candidate) == math.huge then
-		return false
-	end
-	
-	return true
+	return typeof(candidate) == "number" and candidate == candidate and candidate ~= math.huge and candidate ~= -math.huge
 end
 
+-- TODO: Matrices are slow to iterate through. Check during calculating the result instead.
 local function isMatrix(candidate: Matrix): boolean
 	if getmetatable(candidate)::string ~= "Matrix" then
 		return false
@@ -163,6 +165,10 @@ end
 
 -- Constructor: Creates a new `Matrix` object.
 module.newMatrix = function(fill: number, m: number, n: number): Matrix
+	-- TODO: Allow <fill> parameter to be a 2D array of numbers.
+	-- If m*n is larger than <fill>, out of bound will default to `0`.
+	-- If m*n is smaller than <fill>, ignore other values.
+	
 	assert(isNumber(m))
 	assert(isNumber(n))
 	
@@ -181,6 +187,10 @@ end
 
 -- Constructor: Creates a new `StaticMatrix` object.
 module.newStatic = function(fill: number, m: number, n: number): StaticMatrix
+	-- TODO: Allow <fill> parameter to be a 1D array of numbers.
+	-- If m*n is larger than <fill>, out of bound will default to `0`
+	-- If m*n is smaller than <fill>, ignore other values.
+	
 	assert(isNumber(m))
 	assert(isNumber(n))
 	
@@ -194,6 +204,11 @@ end
 
 -- Constructor: Creates a new `DynamicMatrix` object.
 module.newDynamic = function(fill: number, ...: number): DynamicMatrix
+	-- TODO: Allow <fill> as a parameter.
+	-- Creates a copy of <fill> that is limited by the axes.
+	-- Out of bound will default to 0.
+	-- Ignore others.
+	
 	local axes = {...}
 	local res = {}
 	
@@ -216,8 +231,8 @@ end
 -- ** MATRIX OBJECT ** --
 -- ** MATRIX - METHODS ** --
 
--- Method: Inserts a row at `m`. Out of bound checks are enabled by default.
-matrix.addrow = function(self: Matrix, m: number, fill: number, ignore_OOB: boolean?): boolean
+-- Method: Inserts a row at `m`. Clamping is enabled by default.
+matrix.add_row = function(self: Matrix, m: number, fill: number, clamped: boolean?): boolean
 	assert(isMatrix(self))
 	assert(isNumber(m))
 	
@@ -225,7 +240,7 @@ matrix.addrow = function(self: Matrix, m: number, fill: number, ignore_OOB: bool
 	
 	local size_m, size_n = self._size[1], self._size[2]
 	local idx = 0
-	if ignore_OOB then
+	if clamped then
 		idx = math.clamp(m, 1, size_m + 1)
 		
 	else
@@ -238,14 +253,14 @@ matrix.addrow = function(self: Matrix, m: number, fill: number, ignore_OOB: bool
 	return true
 end
 
--- Method: Removes the row at `m`. Out of bound checks are enabled by default.
-matrix.clrrow = function(self: Matrix, m: number, ignore_OOB: boolean?): {number}
+-- Method: Removes the row at `m`. Clamping is enabled by default.
+matrix.clr_row = function(self: Matrix, m: number, clamped: boolean?): {number}
 	assert(isMatrix(self))
 	assert(isNumber(m))
 	
 	local size_m = self._size[1]
 	local idx = 0
-	if ignore_OOB then
+	if clamped then
 		idx = math.clamp(m, 1, size_m)
 		
 	else
@@ -257,8 +272,8 @@ matrix.clrrow = function(self: Matrix, m: number, ignore_OOB: boolean?): {number
 	return table.remove(self._entries, idx) :: any
 end
 
--- Method: Inserts a column at `n`. Out of bound checks are enabled by default.
-matrix.addcol = function(self: Matrix, n: number, fill: number, ignore_OOB: boolean?): boolean
+-- Method: Inserts a column at `n`. Clamping is enabled by default.
+matrix.add_col = function(self: Matrix, n: number, fill: number, clamped: boolean?): boolean
 	assert(isMatrix(self))
 	assert(isNumber(n))
 	
@@ -266,7 +281,7 @@ matrix.addcol = function(self: Matrix, n: number, fill: number, ignore_OOB: bool
 	
 	local size_m, size_n = self._size[1], self._size[2]
 	local idx = 0
-	if ignore_OOB then
+	if clamped then
 		idx = math.clamp(n, 1, size_n)
 		
 	else
@@ -282,14 +297,14 @@ matrix.addcol = function(self: Matrix, n: number, fill: number, ignore_OOB: bool
 	return true
 end
 
--- Method: Removes the column at `m`. Out of bound checks are enabled by default.
-matrix.clrcol = function(self: Matrix, n: number, ignore_OOB: boolean?): {number}
+-- Method: Removes the column at `m`. Clamping is enabled by default.
+matrix.clr_col = function(self: Matrix, n: number, clamped: boolean?): {number}
 	assert(isMatrix(self))
 	assert(isNumber(n))
 	
 	local size_m, size_n = self._size[1], self._size[2]
 	local idx = 0
-	if ignore_OOB then
+	if clamped then
 		idx = math.clamp(n, 1, size_n)
 		
 	else
@@ -307,13 +322,13 @@ matrix.clrcol = function(self: Matrix, n: number, ignore_OOB: boolean?): {number
 end
 
 -- Method: Returns the size of the `Matrix` object.
-matrix.getsize = function(self: Matrix): {number}
+matrix.get_size = function(self: Matrix): {number}
 	assert(isMatrix(self))
 	return self._size
 end
 
 -- Method: Sets the size of the `Matrix` object. The `fill` parameter is used to set the new entries.
-matrix.setsize = function(self: Matrix, m: number, n: number, fill: number): boolean
+matrix.set_size = function(self: Matrix, m: number, n: number, fill: number): boolean
 	assert(isMatrix(self))
 	
 	fill = if isNumber(fill) then fill else 0
@@ -352,7 +367,7 @@ matrix.setsize = function(self: Matrix, m: number, n: number, fill: number): boo
 end
 
 -- Method: Returns the value at the entry using `m` and `n` as coordinates.
-matrix.getentry = function(self: Matrix, m: number, n: number): number
+matrix.get_entry = function(self: Matrix, m: number, n: number): number
 	assert(isMatrix(self))
 	assert(isNumber(m) and 0 < m and m <= self._size[1])
 	assert(isNumber(n) and 0 < n and n <= self._size[2])
@@ -361,7 +376,7 @@ matrix.getentry = function(self: Matrix, m: number, n: number): number
 end
 
 -- Method: Sets the `value` at the entry using `m` and `n` as coordinates.
-matrix.setentry = function(self: Matrix, value: number, m: number, n: number): boolean
+matrix.set_entry = function(self: Matrix, value: number, m: number, n: number): boolean
 	assert(isMatrix(self))
 	assert(isNumber(value))
 	assert(isNumber(m) and 0 < m and m <= self._size[1])
@@ -429,14 +444,14 @@ matrix.__sub = function(a: Matrix, b: Matrix): Matrix
 end
 
 matrix.__mul = function(a: Matrix | number, b: Matrix | number): Matrix
-	local isnum_A, ismatrix_A = isNumber(a::number), isMatrix(a::Matrix)
-	local isnum_B, ismatrix_B = isNumber(b::number), isMatrix(b::Matrix)
+	local is_num_A, is_matrix_A = isNumber(a::number), isMatrix(a::Matrix)
+	local is_num_B, is_matrix_B = isNumber(b::number), isMatrix(b::Matrix)
 	
-	assert(isnum_A or ismatrix_A)
-	assert(isnum_B or ismatrix_B)
+	assert(is_num_A or is_matrix_A)
+	assert(is_num_B or is_matrix_B)
 	
-	if isnum_A or isnum_B then
-		if isnum_A then
+	if is_num_A or is_num_B then
+		if is_num_A then
 			a, b = b, a
 		end
 		
@@ -496,13 +511,13 @@ end
 -- ** STATIC MATRIX - METHODS ** --
 
 -- Method: Returns the size of the `StaticMatrix` object.
-static.getsize = function(self: StaticMatrix): {number}
+static.get_size = function(self: StaticMatrix): {number}
 	assert(isStaticMatrix(self))
 	return self._size
 end
 
 -- Method: Returns the value at the entry using `m` and `n` as coordinates.
-static.getentry = function(self: StaticMatrix, m: number, n: number): number
+static.get_entry = function(self: StaticMatrix, m: number, n: number): number
 	assert(isStaticMatrix(self))
 	assert(isNumber(m) and 0 < m and m <= self._size[1])
 	assert(isNumber(n) and 0 < n and n <= self._size[2])
@@ -513,7 +528,7 @@ static.getentry = function(self: StaticMatrix, m: number, n: number): number
 end
 
 -- Method: Sets the `value` at the entry using `m` and `n` as coordinates.
-static.setentry = function(self: StaticMatrix, value: number, m: number, n: number): boolean
+static.set_entry = function(self: StaticMatrix, value: number, m: number, n: number): boolean
 	assert(isStaticMatrix(self))
 	assert(isNumber(value))
 	assert(isNumber(m) and 0 < m and m <= self._size[1])
@@ -581,14 +596,14 @@ static.__sub = function(a: StaticMatrix, b: StaticMatrix): StaticMatrix
 end
 
 static.__mul = function(a: StaticMatrix | number, b: StaticMatrix | number): StaticMatrix
-	local isnum_A, ismatrix_A = isNumber(a::number), isStaticMatrix(a::StaticMatrix)
-	local isnum_B, ismatrix_B = isNumber(b::number), isStaticMatrix(b::StaticMatrix)
+	local is_num_A, is_matrix_A = isNumber(a::number), isStaticMatrix(a::StaticMatrix)
+	local is_num_B, is_matrix_B = isNumber(b::number), isStaticMatrix(b::StaticMatrix)
 	
-	assert(isnum_A or ismatrix_A)
-	assert(isnum_B or ismatrix_B)
+	assert(is_num_A or is_matrix_A)
+	assert(is_num_B or is_matrix_B)
 	
-	if isnum_A or isnum_B then
-		if isnum_A then
+	if is_num_A or is_num_B then
+		if is_num_A then
 			a, b = b, a
 		end
 		
