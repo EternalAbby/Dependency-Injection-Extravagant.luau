@@ -104,7 +104,7 @@ local metamethods: ComplexNumber_Meta = {} :: ComplexNumber_Meta
 
 -- This is a modified version of the function in TypeCheck. Checks whether a number is valid to use with this module.
 local function isNumber(candidate: number): (boolean, "" | "number")
-	if typeof(candidate) ~= "number" then
+	if type(candidate) ~= "number" then
 		return false, ""
 	end
 	
@@ -117,7 +117,7 @@ end
 
 -- This check function accepts both `ComplexNumber` and `RawComplexNumber` objects.
 local function isModuleObject(candidate: ObjectOnly): (boolean, "" | "ObjectOnly")
-	if typeof(candidate) ~= "table" then
+	if type(candidate) ~= "table" then
 		return false, ""
 	end
 	
@@ -130,7 +130,7 @@ end
 
 -- This check function only accepts `RawComplexNumber` objects.
 local function _isRawComplexNumber(candidate: RawComplexNumber): (boolean, "" | "RawComplexNumber")
-	if typeof(candidate) ~= "table" then
+	if type(candidate) ~= "table" then
 		return false, ""
 	end
 	
@@ -147,7 +147,7 @@ end
 
 -- This check function only accepts `ComplexNumber` objects, so `RawComplexNumber` objects are not allowed.
 local function isComplexNumber(candidate: ComplexNumber): (boolean, "" | "ComplexNumber")
-	if typeof(candidate) ~= "table" then
+	if type(candidate) ~= "table" then
 		return false, ""
 	end
 	

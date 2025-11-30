@@ -69,11 +69,11 @@ type Module = {
 -- HELPER FUNCTION --
 
 local function isString(candidate: string): boolean
-	return typeof(candidate) == "string"
+	return type(candidate) == "string"
 end
 
 local function isNumber(candidate: number): boolean
-	return typeof(candidate) == "number" and candidate == candidate and candidate ~= math.huge and candidate ~= -math.huge
+	return type(candidate) == "number" and candidate == candidate and candidate ~= math.huge and candidate ~= -math.huge
 end
 
 local function isTimerId(candidate: Timer_Identifier): boolean
@@ -347,7 +347,7 @@ module = {
 	end,
 	
 	isTimer = function(candidate: Timer): boolean
-		return typeof(candidate) == "table" and storage[candidate.id] == candidate
+		return type(candidate) == "table" and storage[candidate.id] == candidate
 	end
 }
 

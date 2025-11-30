@@ -25,11 +25,11 @@ type Cache = {
 local cache: Cache = {}
 
 local function isString(candidate: string)
-	return typeof(candidate) == "string"
+	return type(candidate) == "string"
 end
 
 local function isNumber(candidate: number): boolean
-	return typeof(candidate) == "number" and candidate == candidate and candidate ~= math.huge and candidate ~= -math.huge
+	return type(candidate) == "number" and candidate == candidate and candidate ~= math.huge and candidate ~= -math.huge
 end
 
 local function isInstance(candidate: Instance, classname: string?): boolean
@@ -37,7 +37,7 @@ local function isInstance(candidate: Instance, classname: string?): boolean
 		return false
 	end
 	
-	if typeof(classname) == "string" and candidate.ClassName ~= classname then
+	if type(classname) == "string" and candidate.ClassName ~= classname then
 		return false
 	end
 	
@@ -194,7 +194,7 @@ end
 ]]
 module.FindFirstInstance_GD = function(name: string | {string}): Instance?
 	local is_str = isString(name::string)
-	local is_tbl = typeof(name) == "table"
+	local is_tbl = type(name) == "table"
 	
 	assert(is_str or is_tbl, `Failed to compute \`.FindFirstInstance_GD()\` function. Expected <string> or <\{string}> type for <name> (arg #1), got <{typeof(name)}>.`)
 	
@@ -256,7 +256,7 @@ end
 ]]
 module.FindFirstInstance_IterDFS = function(name: string | {string}): Instance?
 	local is_str = isString(name::string)
-	local is_tbl = typeof(name) == "table"
+	local is_tbl = type(name) == "table"
 	
 	assert(is_str or is_tbl, `Failed to compute \`.FindFirstInstance_IterDFS()\` function. Expected <string> or <\{string}> type for <name> (arg #1), got <{typeof(name)}>.`)
 	
@@ -367,7 +367,7 @@ end
 ]]
 module.FindFirstInstance_RecurDFS = function(name: string | {string}): Instance?
 	local is_str = isString(name::string)
-	local is_tbl = typeof(name) == "table"
+	local is_tbl = type(name) == "table"
 	
 	assert(is_str or is_tbl, `Failed to compute \`.FindFirstInstance_RecurDFS()\` function. Expected <string> or <\{string}> type for <name> (arg #1), got <{typeof(name)}>.`)
 	

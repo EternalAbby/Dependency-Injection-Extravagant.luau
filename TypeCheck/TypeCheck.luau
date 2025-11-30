@@ -10,11 +10,11 @@
 local module = {}
 
 module.isString = function(candidate: string): boolean
-	return typeof(candidate) == "string"
+	return type(candidate) == "string"
 end
 
 module.isNumber = function(candidate: number, allowSpecial: boolean?): boolean
-	if typeof(candidate) ~= "number" then
+	if type(candidate) ~= "number" then
 		return false
 	end
 	
@@ -28,19 +28,19 @@ module.isNumber = function(candidate: number, allowSpecial: boolean?): boolean
 end
 
 module.isBoolean = function(candidate: boolean | nil, exclude_nil: boolean?): boolean
-	if not exclude_nil and typeof(candidate) == "nil" then
+	if not exclude_nil and type(candidate) == "nil" then
 		return true
 	end
 	
-	return typeof(candidate) == "boolean"
+	return type(candidate) == "boolean"
 end
 
 module.isTable = function(candidate: {[any]: any}): boolean
-	return typeof(candidate) == "table"
+	return type(candidate) == "table"
 end
 
 module.isArray = function(candidate: {[number]: any}, ignore_PrerequisiteChecks: boolean?): boolean
-	if not ignore_PrerequisiteChecks and typeof(candidate) ~= "table" then
+	if not ignore_PrerequisiteChecks and type(candidate) ~= "table" then
 		return false
 	end
 	
@@ -64,7 +64,7 @@ module.isArray = function(candidate: {[number]: any}, ignore_PrerequisiteChecks:
 end
 
 module.isDictionary = function(candidate: {[any]: any}, ignore_PrerequisiteChecks: boolean?): boolean
-	if not ignore_PrerequisiteChecks and typeof(candidate) ~= "table" then
+	if not ignore_PrerequisiteChecks and type(candidate) ~= "table" then
 		return false
 	end
 	
@@ -81,7 +81,7 @@ module.isInstance = function(candidate: Instance, classname: string?): boolean
 		return false
 	end
 	
-	if typeof(classname) == "string" and candidate.ClassName ~= classname then
+	if type(classname) == "string" and candidate.ClassName ~= classname then
 		return false
 	end
 	
