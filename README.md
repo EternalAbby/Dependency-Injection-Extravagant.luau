@@ -1,3 +1,11 @@
+# DEPRECATED NOTICE
+
+This repository has been DEPRECATED.
+
+Due to how complex the workflow had become to maintain each module by myself, I cannot continue working on them in a single repository. As such, I had stopped maintaining them in this repository. However, you may find them in their own separate repository in their `README.md` or on my GitHub profile!
+
+It has been a great journey using GitHub so far. I hope to continue enjoying this process for some time.
+
 # Welcome to Dependency-Injection-Extravagant.luau
 
 This is Dependency Injection Extravagant, or the acronym DIE. A repository made to include a series of modules!
