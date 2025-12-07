@@ -2,6 +2,7 @@
 --!optimize 2
 --!native
 
+-- TODO: [VERSION 1.1.3] Create unit tests.
 -- TODO: [VERSION 1.2.0] Add support for `nan` and `inf`.
 
 -- Version: 1.1.3
@@ -104,11 +105,7 @@ local metamethods: ComplexNumber_Meta = {} :: ComplexNumber_Meta
 
 -- This is a modified version of the function in TypeCheck. Checks whether a number is valid to use with this module.
 local function isNumber(candidate: number): (boolean, "" | "number")
-	if type(candidate) ~= "number" then
-		return false, ""
-	end
-	
-	if candidate ~= candidate or math.abs(candidate) == math.huge then
+	if type(candidate) ~= "number" or not math.isfinite(candidate) then
 		return false, ""
 	end
 	
@@ -117,11 +114,9 @@ end
 
 -- This check function accepts both `ComplexNumber` and `RawComplexNumber` objects.
 local function isModuleObject(candidate: ObjectOnly): (boolean, "" | "ObjectOnly")
-	if type(candidate) ~= "table" then
-		return false, ""
-	end
-	
-	if not isNumber(candidate.real) or not isNumber(candidate.complex) then
+	if type(candidate) ~= "table"
+	or not isNumber(candidate.real)
+	or not isNumber(candidate.complex) then
 		return false, ""
 	end
 	
@@ -130,15 +125,10 @@ end
 
 -- This check function only accepts `RawComplexNumber` objects.
 local function _isRawComplexNumber(candidate: RawComplexNumber): (boolean, "" | "RawComplexNumber")
-	if type(candidate) ~= "table" then
-		return false, ""
-	end
-	
-	if getmetatable(candidate) ~= nil then
-		return false, ""
-	end
-	
-	if not isNumber(candidate.real) or not isNumber(candidate.complex) then
+	if type(candidate) ~= "table"
+	or getmetatable(candidate) ~= nil
+	or not isNumber(candidate.real)
+	or not isNumber(candidate.complex) then
 		return false, ""
 	end
 	
@@ -147,15 +137,10 @@ end
 
 -- This check function only accepts `ComplexNumber` objects, so `RawComplexNumber` objects are not allowed.
 local function isComplexNumber(candidate: ComplexNumber): (boolean, "" | "ComplexNumber")
-	if type(candidate) ~= "table" then
-		return false, ""
-	end
-	
-	if getmetatable(candidate)::string ~= "ComplexNumber" then
-		return false, ""
-	end
-	
-	if not isNumber(candidate.real) or not isNumber(candidate.complex) then
+	if type(candidate) ~= "table"
+	or getmetatable(candidate) ~= "ComplexNumber"
+	or not isNumber(candidate.real)
+	or not isNumber(candidate.complex) then
 		return false, ""
 	end
 	
