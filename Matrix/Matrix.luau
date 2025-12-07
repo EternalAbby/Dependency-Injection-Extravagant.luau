@@ -44,7 +44,7 @@ export type DynamicMatrix = {
 -- ** INTERNAL FUNCTIONS ** --
 
 local function isNumber(candidate: number): boolean
-	return typeof(candidate) == "number" and candidate == candidate and candidate ~= math.huge and candidate ~= -math.huge
+	return type(candidate) == "number" and candidate == candidate and candidate ~= math.huge and candidate ~= -math.huge
 end
 
 -- TODO: Matrices are slow to iterate through. Check during calculating the result instead.
@@ -53,11 +53,11 @@ local function isMatrix(candidate: Matrix): boolean
 		return false
 	end
 	
-	if typeof(candidate._size) ~= "table" or #candidate._size ~= 2 then
+	if type(candidate._size) ~= "table" or #candidate._size ~= 2 then
 		return false
 	end
 	
-	if typeof(candidate._entries) ~= "table" then
+	if type(candidate._entries) ~= "table" then
 		return false
 	end
 	
@@ -69,7 +69,7 @@ local function isMatrix(candidate: Matrix): boolean
 	
 	local totalSize = 0
 	for i = 1, m do
-		if typeof(candidate._entries[i]) ~= "table" then
+		if type(candidate._entries[i]) ~= "table" then
 			return false
 		end
 		
@@ -90,11 +90,11 @@ local function _isSquareMatrix(candidate: Matrix): boolean
 		return false
 	end
 	
-	if typeof(candidate._size) ~= "table" or #candidate._size ~= 2 then
+	if type(candidate._size) ~= "table" or #candidate._size ~= 2 then
 		return false
 	end
 	
-	if typeof(candidate._entries) ~= "table" then
+	if type(candidate._entries) ~= "table" then
 		return false
 	end
 	
@@ -110,7 +110,7 @@ local function _isSquareMatrix(candidate: Matrix): boolean
 	
 	local totalSize = 0
 	for i = 1, m do
-		if typeof(candidate._entries[i]) ~= "table" then
+		if type(candidate._entries[i]) ~= "table" then
 			return false
 		end
 		
@@ -131,11 +131,11 @@ local function isStaticMatrix(candidate: StaticMatrix): boolean
 		return false
 	end
 	
-	if typeof(candidate._size) ~= "table" or #candidate._size ~= 2 then
+	if type(candidate._size) ~= "table" or #candidate._size ~= 2 then
 		return false
 	end
 	
-	if typeof(candidate._entries) ~= "table" then
+	if type(candidate._entries) ~= "table" then
 		return false
 	end
 	
