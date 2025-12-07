@@ -18,9 +18,7 @@ module.isNumber = function(candidate: number, allowSpecial: boolean?): boolean
 		return false
 	end
 	
-	-- nan (not a number) has a property where the boolean expression: `nan == nan` returns false.
-	-- inf (math.huge) has strange properties, so it is also considered special.
-	if not allowSpecial and (candidate ~= candidate or math.abs(candidate) == math.huge) then
+	if not allowSpecial and math.isfinite(candidate) then
 		return false
 	end
 	
