@@ -2,7 +2,6 @@
 --!optimize 2
 --!native
 
--- TODO: [VERSION 1.1.3] Create unit tests.
 -- TODO: [VERSION 1.2.0] Add support for `nan` and `inf`.
 
 -- Version: 1.1.3
