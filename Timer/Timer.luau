@@ -2,12 +2,12 @@
 --!optimize 2
 --!native
 
--- TODO: [VERSION 1.2.0] Add user-defined function descriptions.
-
 -- TODO: [VERSION 1.3.0] Implement internal storage for Timer properties. In case of any malicious/false modifications from the user. Change source code to use them instead of the ones that is public.
 -- TODO: [VERSION 1.3.0] Implement Timer object reset function.
 
+
 -- Version: 1.2.0
+
 
 -- INTERNAL VARIABLE --
 
@@ -73,7 +73,7 @@ local function isString(candidate: string): boolean
 end
 
 local function isNumber(candidate: number): boolean
-	return type(candidate) == "number" and candidate == candidate and candidate ~= math.huge and candidate ~= -math.huge
+	return type(candidate) == "number" and math.isfinite(candidate)
 end
 
 local function isTimerId(candidate: Timer_Identifier): boolean
@@ -136,6 +136,7 @@ local function ThrowTimerOperationError(): nil
 	)
 end
 
+-- Formats `n` into a string with `digits` digits.
 local function FormatDigit(n: number, digits: number): string
 	return (`%0{digits}i`::any):format(tostring(n))
 end
@@ -151,6 +152,11 @@ end
 
 -- METHOD --
 
+--[[
+	Method: Starts the Timer. `self` enters Active state.
+	This method always works. It can be used to soft reset `self`.
+	This is a simulation and does not update per frame.
+]]
 index_table.Start = function(self: Timer): nil
 	local currentTime = os.clock()
 	
@@ -163,6 +169,11 @@ index_table.Start = function(self: Timer): nil
 	return nil
 end
 
+--[[
+	Method: Resumes the Timer. `self` enters Active state.
+	This method only works if the module can detect that `self` is in Paused state.
+	This is a simulation and does not update per frame.
+]]
 index_table.Resume = function(self: Timer): nil
 	local currentTime = os.clock()
 	
@@ -178,6 +189,11 @@ index_table.Resume = function(self: Timer): nil
 	return nil
 end
 
+--[[
+	Method: Resumes the Timer. `self` enters Paused state.
+	This method only works if the module can detect that `self` is in Active state.
+	This is a simulation and does not update per frame.
+]]
 index_table.Pause = function(self: Timer): nil
 	local currentTime = os.clock()
 	
@@ -192,6 +208,11 @@ index_table.Pause = function(self: Timer): nil
 	return nil
 end
 
+--[[
+	Method: Resumes the Timer. `self` enters Inactive state.
+	This method always works. It can be used to soft reset `self`.
+	This is a simulation and does not update per frame.
+]]
 index_table.Stop = function(self: Timer): nil
 	Check(module.isTimer(self), ThrowTimerOperationError)
 	
@@ -206,12 +227,19 @@ index_table.Stop = function(self: Timer): nil
 	return nil
 end
 
+--[[
+	Method: Calculates the current time.
+	Additionally, updates the TImer state if possible.
+]]
 index_table.GetCurrentTime = function(self: Timer): number
 	local currentTime = os.clock()
 	
 	Check(module.isTimer(self), ThrowTimerOperationError)
 	
 	if currentTime >= self.stopTime then
+		self.startTime = -1
+		self.stopTime = -1
+		self.pauseTime = -1
 		self.isActive = false
 	end
 	
@@ -224,6 +252,10 @@ index_table.GetCurrentTime = function(self: Timer): number
 	return -1
 end
 
+--[[
+	Method: Sets the duration for the Timer.
+	This method does not affect `self` if it is in Active state.
+]]
 index_table.SetDuration = function(self: Timer, seconds: number): nil
 	Check(module.isTimer(self), ThrowTimerOperationError)
 	Check(isNumber(seconds), ThrowTypeError, "number", "seconds", 2, seconds)
@@ -232,29 +264,49 @@ index_table.SetDuration = function(self: Timer, seconds: number): nil
 	return nil
 end
 
+--[[
+	Method: Returns `true` if `self` is in Active state.
+	Otherwise, returns `false`. This can be used to detect Unknown state.
+	Additionally, updates the TImer state if possible.
+]]
 index_table.IsActive = function(self: Timer): boolean
 	local currentTime = os.clock()
-	
 	Check(module.isTimer(self), ThrowTimerOperationError)
 	
-	return self.isActive and currentTime < self.stopTime
+	if currentTime >= self.stopTime then
+		self.startTime = -1
+		self.stopTime = -1
+		self.pauseTime = -1
+		self.isActive = false
+	end
+	
+	return self.isActive
 end
 
+--[[
+	Method: Returns `true` if `self` is in Inactive state.
+	Otherwise, returns `false`. This can be used to detect Unknown state.
+	Additionally, updates the TImer state if possible.
+]]
 index_table.IsInactive = function(self: Timer): boolean
 	local currentTime = os.clock()
-	
 	Check(module.isTimer(self), ThrowTimerOperationError)
 	
 	if self.pauseTime == -1 and currentTime >= self.stopTime then
+		self.startTime = -1
+		self.stopTime = -1
 		self.isActive = false
 	end
 	
 	return self.pauseTime == -1 and not self.isActive
 end
 
+--[[
+	Method: Returns `true` if `self` is in Paused state.
+	Otherwise, returns `false`. This can be used to detect Unknown state.
+]]
 index_table.IsPaused = function(self: Timer): boolean
 	Check(module.isTimer(self), ThrowTimerOperationError)
-	
 	return self.pauseTime ~= -1 and not self.isActive
 end
 
@@ -279,7 +331,7 @@ timer_meta.__tostring = function(self: Timer): string
 	
 	local hours, minutes, seconds
 	
-	hours, timerTime = timerTime // 216000, timerTime % 216000
+	hours, timerTime = timerTime // 86400, timerTime % 86400
 	minutes, timerTime = timerTime // 3600, timerTime % 3600
 	seconds, timerTime = timerTime // 60, timerTime % 60
 	
@@ -297,6 +349,7 @@ timer_meta = timer_meta :: Timer_Meta
 -- MODULE --
 
 module = {
+	-- Constructor: Creates a new `Timer` object.
 	new = function(id: Timer_Identifier, duration: number, protected: boolean?): Timer
 		Check(isTimerId(id), ThrowTypeError, "TimerId", "id", 1, id)
 		Check(not module.hasTimer(id), ThrowExistingTimerError, id, 1)
@@ -320,6 +373,7 @@ module = {
 		return self
 	end,
 	
+	-- Function: Destroys a `Timer` object using `id`.
 	destroy = function(id: Timer_Identifier): nil
 		Check(isTimerId(id), ThrowTypeError, "TimerId", "id", 1, id)
 		Check(not protected_storage[id], ThrowProtectedError, 1, id)
@@ -341,11 +395,13 @@ module = {
 		return nil
 	end,
 	
+	-- Function: Checks whether there exists a `Timer` with `id`.
 	hasTimer = function(id: Timer_Identifier): boolean
 		Check(isTimerId(id), ThrowTypeError, "TimerId", "id", 1, id)
 		return storage[id] ~= nil
 	end,
 	
+	-- Function: Checks whether `candidate` is a `Timer` object.
 	isTimer = function(candidate: Timer): boolean
 		return type(candidate) == "table" and storage[candidate.id] == candidate
 	end
