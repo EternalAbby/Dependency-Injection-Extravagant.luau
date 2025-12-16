@@ -2,6 +2,7 @@
 --!optimize 2
 --!native
 
+-- TODO: [VERSION 1.1.0] Implement row operations for `StaticMatrix` objects.
 -- TODO: [VERSION 1.1.0] Implement special operations that are valid for Square Matrix.
 -- TODO: [VERSION 1.1.0] Add function descriptions.
 
@@ -34,6 +35,10 @@ type Matrix_Method = {
 	clr_row: (self: Matrix, m: number, clamped: boolean?) -> {number},
 	add_col: (self: Matrix, n: number, fill: FillParameter?, clamped: boolean?) -> nil,
 	clr_col: (self: Matrix, n: number, clamped: boolean?) -> {number},
+	
+	row_add: (self: Matrix, at: number, with: number) -> nil,
+	row_mul: (self: Matrix, at: number, with: number) -> nil,
+	row_switch: (self: Matrix, at: number, with: number) -> nil,
 	
 	transpose: (self: Matrix) -> Matrix,
 	
@@ -267,6 +272,50 @@ matrix_index.clr_col = function(self: Matrix, n: number, clamped: boolean?): {nu
 	return ret
 end
 
+-- modify `at` using `with`
+matrix_index.row_add = function(self: Matrix, at: number, with: number): nil
+	local size = self.size
+	
+	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
+	
+	local entries_at, entries_with = self.entries[at], self.entries[with]
+	
+	for col_idx = 1, rawlen(entries_at) do
+		entries_at[col_idx] = entries_at[col_idx] + entries_with[col_idx]
+	end
+	
+	return nil
+end
+
+matrix_index.row_mul = function(self: Matrix, at: number, with: number): nil
+	local size = self.size
+	
+	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
+	
+	local entries_at = self.entries[at]
+	
+	for col_idx = 1, rawlen(entries_at) do
+		entries_at[col_idx] *= with
+	end
+	
+	return nil
+end
+
+matrix_index.row_switch = function(self: Matrix, at: number, with: number): nil
+	local size = self.size
+	
+	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
+	
+	local entries = self.entries
+	
+	entries[at], entries[with] = entries[with], entries[at]
+	
+	return nil
+end
+
 matrix_index.transpose = function(self: Matrix): Matrix
 	local m, n = self.size[1], self.size[2]
 	local entries = {}
@@ -329,7 +378,6 @@ end
 matrix_index.get_entry = function(self: Matrix, m: number, n: number): number
 	return self.entries[m][n]
 end
-
 
 matrix_index.set_entry = function(self: Matrix, value: number, m: number, n: number): nil
 	self.entries[m][n] = value
