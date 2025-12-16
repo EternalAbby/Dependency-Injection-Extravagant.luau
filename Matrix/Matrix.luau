@@ -155,8 +155,19 @@ local function ThrowInvalidSizeError(): nil
 		--------------------\
 		Error: Failed to perform \`{debug.info(3, "n")}\`.\
 		Reason: Attempted to perform operation with incorrect matrix size.\
-		Expected: Correct matrix size. Please revise your logic.\
+		Expected: Correct matrix size. Please revise logic.\
 		Cause: Incorrect matrix size. Possible logic error.\
+		--------------------`
+	)
+end
+
+local function ThrowRowMulByZeroError(): nil
+	error(`\
+		--------------------\
+		Error: Failed to perform \`{debug.info(3, "n")}\`.\
+		Reason: Attempted to perform row multiplication with zero.\
+		Expected: Cannot perform row multiplication with zero. Please revise logic.\
+		Cause: Incorrect \`with\` argument. Possible logic error.\
 		--------------------`
 	)
 end
@@ -292,7 +303,8 @@ matrix_index.row_mul = function(self: Matrix, at: number, with: number): nil
 	local size = self.size
 	
 	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
-	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
+	Check(isNumber(with), ThrowTypeError, "number", "with", 3, with)
+	Check(with ~= 0, ThrowRowMulByZeroError)
 	
 	local entries_at = self.entries[at]
 	
