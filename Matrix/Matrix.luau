@@ -1,343 +1,302 @@
 --!strict
+--!optimize 2
+--!native
 
--- TODO: [VERSION 1.1.0] Rewrite the structure of the objects.
+-- TODO: [VERSION 1.1.0] Implement special operations that are valid for Square Matrix.
+-- TODO: [VERSION 1.1.0] Add function descriptions.
 
--- TODO: [VERSION 1.1.0] In .newMatrix(), Allow <fill> parameter to be a 2D array of numbers.
--- TODO: [VERSION 1.1.0] In .newStatic(), Allow <fill> parameter to be a 1D array of numbers.
--- TODO: [VERSION 1.1.0] In .newDynamic(), Allow <fill> parameter to be a ND array of numbers.
--- TODO: [VERSION 1.1.0] Out of bounds defaults to 0.
-
--- TODO: [VERSION 1.1.0] Implement special operations that only work for Square Matrix objects.
--- TODO: [VERSION 1.1.0] Add error handling messages. Use helper functions to simplify message format.
-
--- Version: 1.1.0
-
-local module = {}
-
-local matrix = {}
-local static = {}
+-- TODO: [VERSION 1.2.0] Allow object interactions.
+-- TODO: [VERSION 1.2.0] Implement operations on `Tensor`.
 
 
--- ** TYPE DEFINITIONS ** --
+-- INTERNAL VARIABLE --
 
--- This type is used for a 2D matrix, used in math.
+local matrix_index: Matrix_Method = {} :: Matrix_Method
+local matrix_meta: Matrix_Meta = {} :: Matrix_Meta
+
+local static_index: StaticMatrix_Method = {} :: StaticMatrix_Method
+local static_meta: StaticMatrix_Meta = {} :: StaticMatrix_Meta
+
+local tensor_index: Tensor_Method = {} :: Tensor_Method
+local tensor_meta: Tensor_Meta = {} :: Tensor_Meta
+
+
+-- TYPE DEFINITION --
+
+type SizeProperty = {[number]: number}
+type FillParameter = number | {number}
+
+type Matrix_EntriesProperty = {[number]: {number}}
+type Matrix_FillParameter = number | Matrix_EntriesProperty
+
+type Matrix_Method = {
+	add_row: (self: Matrix, m: number, fill: FillParameter?, clamped: boolean?) -> nil,
+	clr_row: (self: Matrix, m: number, clamped: boolean?) -> {number},
+	add_col: (self: Matrix, n: number, fill: FillParameter?, clamped: boolean?) -> nil,
+	clr_col: (self: Matrix, n: number, clamped: boolean?) -> {number},
+	
+	transpose: (self: Matrix) -> Matrix,
+	
+	get_size: (self: Matrix) -> SizeProperty,
+	set_size: (self: Matrix, m: number, n: number, fill: number?) -> nil,
+	
+	get_entry: (self: Matrix, m: number, n: number) -> number,
+	set_entry: (self: Matrix, value: number, m: number, n: number) -> nil
+}
+type Matrix_Meta = {
+	__index: Matrix_Method,
+	__metatable: "Matrix",
+	
+	__add: (a: Matrix, b: Matrix) -> Matrix,
+	__sub: (a: Matrix, b: Matrix) -> Matrix,
+	__mul: (a: Matrix | number, b: Matrix | number) -> Matrix
+}
 export type Matrix = setmetatable<{
-	_entries: {[number]: {number}},
-	_size: {[number]: number}
-}, typeof(matrix)>
+	entries: Matrix_EntriesProperty,
+	size: SizeProperty
+}, Matrix_Meta>
 
--- This type is used for a 2D matrix, but stored as a 1D array, and size cannot be changed.
+
+type StaticMatrix_EntriesProperty = {[number]: number}
+type StaticMatrix_FillParameter = number | StaticMatrix_EntriesProperty
+
+type StaticMatrix_Method = {
+	transpose: (self: StaticMatrix) -> StaticMatrix,
+	
+	get_size: (self: StaticMatrix) -> SizeProperty,
+	
+	get_entry: (self: StaticMatrix, m: number, n: number) -> number,
+	set_entry: (self: StaticMatrix, value: number, m: number, n: number) -> nil
+}
+type StaticMatrix_Meta = {
+	__index: StaticMatrix_Method,
+	__metatable: "Static",
+	
+	__add: (a: StaticMatrix, b: StaticMatrix) -> StaticMatrix,
+	__sub: (a: StaticMatrix, b: StaticMatrix) -> StaticMatrix,
+	__mul: (a: StaticMatrix | number, b: StaticMatrix | number) -> StaticMatrix
+}
 export type StaticMatrix = setmetatable<{
-	_entries: {[number]: number},
-	_size: {[number]: number}
-}, typeof(static)>
+	entries: StaticMatrix_EntriesProperty,
+	size: SizeProperty
+}, StaticMatrix_Meta>
 
-type RepeatingEntry = {RepeatingEntry | number}
 
--- This type is used to create a N-dimension matrix. Can only do manual read/write and module does not support anything.
-export type DynamicMatrix = {
-	_entries: RepeatingEntry,
-	_size: {[number]: number}
+type Tensor_EntriesProperty = {Tensor_EntriesProperty | number}
+type Tensor_FillParameter = number | Tensor_EntriesProperty
+
+type Tensor_Method = {
+	get_size: (self: StaticMatrix) -> SizeProperty,
+	
+	get_entry: (self: StaticMatrix, m: number, n: number) -> number,
+	set_entry: (self: StaticMatrix, value: number, m: number, n: number) -> nil
+}
+type Tensor_Meta = {
+	__index: Tensor_Method,
+	__metatable: "Tensor"
+}
+export type Tensor = setmetatable<{
+	entries: Tensor_EntriesProperty,
+	size: SizeProperty
+}, Tensor_Meta>
+
+type Module = {
+	newMatrix: (fill: Matrix_FillParameter, m: number, n: number) -> Matrix,
+	newStaticMatrix: (fill: StaticMatrix_FillParameter, m: number, n: number) -> StaticMatrix,
+	newTensor: (fill: Tensor_FillParameter, ...number) -> Tensor
 }
 
 
--- ** INTERNAL FUNCTIONS ** --
+-- HELPER FUNCTION --
 
-local function isNumber(candidate: number): boolean
-	return type(candidate) == "number" and candidate == candidate and candidate ~= math.huge and candidate ~= -math.huge
+local function isNumber(candidate: number)
+	return type(candidate) == "number" and math.isfinite(candidate)
 end
 
--- TODO: Matrices are slow to iterate through. Check during calculating the result instead.
-local function isMatrix(candidate: Matrix): boolean
-	if getmetatable(candidate)::string ~= "Matrix" then
-		return false
-	end
-	
-	if type(candidate._size) ~= "table" or #candidate._size ~= 2 then
-		return false
-	end
-	
-	if type(candidate._entries) ~= "table" then
-		return false
-	end
-	
-	local m, n = candidate._size[1], candidate._size[2]
-	
-	if not isNumber(m) or not isNumber(n) then
-		return false
-	end
-	
-	local totalSize = 0
-	for i = 1, m do
-		if type(candidate._entries[i]) ~= "table" then
-			return false
-		end
-		
-		for j = 1, n do
-			if not isNumber(candidate._entries[i][j]) then
-				return false
-			end
-			
-			totalSize += 1
-		end
-	end
-	
-	return totalSize == m * n
+-- A very loose surface check for `Matrix` objects. Only checks for data type of object and properties and the metatable. Does not check further into the `.entries` property.
+local function isPossibleMatrix(candidate: Matrix): boolean
+	return type(candidate) == "table" and getmetatable(candidate) == "Matrix" and type(candidate.entries) == "table" and type(candidate.size) == "table"
 end
 
-local function _isSquareMatrix(candidate: Matrix): boolean
-	if getmetatable(candidate)::string ~= "Matrix" then
-		return false
-	end
-	
-	if type(candidate._size) ~= "table" or #candidate._size ~= 2 then
-		return false
-	end
-	
-	if type(candidate._entries) ~= "table" then
-		return false
-	end
-	
-	local m, n = candidate._size[1], candidate._size[2]
-	
-	if not isNumber(m) or not isNumber(n) then
-		return false
-	end
-	
-	if m ~= n then
-		return false
-	end
-	
-	local totalSize = 0
-	for i = 1, m do
-		if type(candidate._entries[i]) ~= "table" then
-			return false
-		end
-		
-		for j = 1, n do
-			if not isNumber(candidate._entries[i][j]) then
-				return false
-			end
-			
-			totalSize += 1
-		end
-	end
-	
-	return totalSize == m * n
+-- A very loose surface check for `Matrix` objects. Only checks for data type of object and properties and the metatable. Does not check further into the `.entries` property.
+local function isPossibleStaticMatrix(candidate: StaticMatrix): boolean
+	return type(candidate) == "table" and getmetatable(candidate) == "StaticMatrix" and type(candidate.entries) == "table" and type(candidate.size) == "table"
 end
 
-local function isStaticMatrix(candidate: StaticMatrix): boolean
-	if getmetatable(candidate) ~= "StaticMatrix" then
-		return false
+local function ThrowTypeError(expected_type: string, arg_name: string, arg_idx: number, arg_val: any): nil
+	error(`\
+		--------------------\
+		Error: Failed to perform \`{debug.info(3, "n")}\`.\
+		Reason: A type error occurred when running the function.\
+		Expected: <{expected_type}> type for \`{arg_name}\` (arg #{arg_idx}).\
+		Cause: Received <{typeof(arg_val)}> type.\
+		--------------------`
+	)
+end
+
+local function ThrowOutOfBoundError(arg_name: string, arg_idx: number, arg_val: any): nil
+	error(`\
+		--------------------\
+		Error: Failed to perform \`{debug.info(3, "n")}\`.\
+		Reason: Attempted to access an index out of bound.\
+		Expected: Clamped enabled. Index {arg_val} is out of bound for \`{arg_name}\` (arg #{arg_idx}).\
+		Cause: Possible logic error leading to accessing out of bound.\
+		--------------------`
+	)
+end
+
+local function ThrowInvalidSizeError(): nil
+	error(`\
+		--------------------\
+		Error: Failed to perform \`{debug.info(3, "n")}\`.\
+		Reason: Attempted to perform operation with incorrect matrix size.\
+		Expected: Correct matrix size. Please revise your logic.\
+		Cause: Incorrect matrix size. Possible logic error.\
+		--------------------`
+	)
+end
+
+local function InBoundary(candidate: number, minimum: number, maximum: number): boolean
+	return minimum <= candidate and candidate <= maximum
+end
+
+local function Check(expression: boolean, err_func: (...any) -> nil, ...: any): nil
+	if expression then
+		err_func(...)
 	end
-	
-	if type(candidate._size) ~= "table" or #candidate._size ~= 2 then
-		return false
-	end
-	
-	if type(candidate._entries) ~= "table" then
-		return false
-	end
-	
-	local m, n = candidate._size[1], candidate._size[2]
-	
-	if not isNumber(m) or not isNumber(n) then
-		return false
-	end
-	
-	local total_size = m * n
-	
-	if #candidate._entries ~= total_size then
-		return false
-	end
-	
-	for i = 1, total_size do
-		if not isNumber(candidate._entries[i]) then
-			return false
-		end
-	end
-	
-	return true
+	return nil
 end
 
 
--- ** CONSTRUCTORS ** --
+-- MATRIX METHOD --
 
--- Constructor: Creates a new `Matrix` object.
-module.newMatrix = function(fill: number, m: number, n: number): Matrix
-	-- TODO: Allow <fill> parameter to be a 2D array of numbers.
-	-- If m*n is larger than <fill>, out of bound will default to `0`.
-	-- If m*n is smaller than <fill>, ignore other values.
-	
-	assert(isNumber(m))
-	assert(isNumber(n))
-	
-	fill = if isNumber(fill) then fill else 0
-	
-	local res = {}
-	res._entries = {}
-	res._size = {m, n}
-	
-	for i = 1, m do
-		res._entries[i] = table.create(n, fill)
-	end
-	
-	return setmetatable(res, matrix) :: Matrix
-end
-
--- Constructor: Creates a new `StaticMatrix` object.
-module.newStatic = function(fill: number, m: number, n: number): StaticMatrix
-	-- TODO: Allow <fill> parameter to be a 1D array of numbers.
-	-- If m*n is larger than <fill>, out of bound will default to `0`
-	-- If m*n is smaller than <fill>, ignore other values.
-	
-	assert(isNumber(m))
-	assert(isNumber(n))
-	
-	fill = if isNumber(fill) then fill else 0
-	
-	local res = {}
-	res._entries = table.create(m * n, fill)
-	res._size = {m, n}
-	return setmetatable(res, static) :: StaticMatrix
-end
-
--- Constructor: Creates a new `DynamicMatrix` object.
-module.newDynamic = function(fill: number, ...: number): DynamicMatrix
-	-- TODO: Allow <fill> as a parameter.
-	-- Creates a copy of <fill> that is limited by the axes.
-	-- Out of bound will default to 0.
-	-- Ignore others.
-	
-	local axes = {...}
-	local res = {}
-	
-	local function helper(cur_arr: {[number]: {} | number}, cur_idx: number): {} | number
-		if cur_idx == #axes then
-			return table.create(axes[cur_idx], fill)
-		end
-		
-		for idx = 1, axes[cur_idx] do
-			cur_arr[idx] = helper({}, cur_idx + 1)
-		end
-		
-		return cur_arr
-	end
-	
-	return helper(res, 1) :: DynamicMatrix
-end
-
-
--- ** MATRIX OBJECT ** --
--- ** MATRIX - METHODS ** --
-
--- Method: Inserts a row at `m`. Clamping is enabled by default.
-matrix.add_row = function(self: Matrix, m: number, fill: number, clamped: boolean?): boolean
-	assert(isMatrix(self))
-	assert(isNumber(m))
-	
-	fill = if isNumber(fill) then fill else 0
-	
-	local size_m, size_n = self._size[1], self._size[2]
+matrix_index.add_row = function(self: Matrix, m: number, fill: FillParameter?, clamped: boolean?): nil
+	local size_m, size_n = self.size[1], self.size[2]
 	local idx = 0
+	
 	if clamped then
 		idx = math.clamp(m, 1, size_m + 1)
 		
 	else
-		assert(1 <= m and m <= size_m + 1)
+		Check(InBoundary(m, 1, size_m + 1), ThrowOutOfBoundError, "m", 1, m)
 		idx = m
 	end
 	
-	table.insert(self._entries, idx, table.create(size_n, fill))
-	self._size[1] += 1
-	return true
+	if type(fill) == "table" then
+		local new = table.create(size_n, 0)
+		for i, _ in ipairs(new) do
+			local val = rawget(fill, i)
+			new[i] = if isNumber(val::number) then val else 0
+		end
+		
+		table.insert(self.entries, idx, new)
+		
+	else
+		fill = if isNumber(fill::number) then fill else 0
+		table.insert(self.entries, idx, table.create(size_n, fill))
+	end
+	
+	self.size[1] += 1
+	return nil
 end
 
--- Method: Removes the row at `m`. Clamping is enabled by default.
-matrix.clr_row = function(self: Matrix, m: number, clamped: boolean?): {number}
-	assert(isMatrix(self))
-	assert(isNumber(m))
-	
-	local size_m = self._size[1]
+matrix_index.clr_row = function(self: Matrix, m: number, clamped: boolean?): {number}
+	local size_m = self.size[1]
 	local idx = 0
+	
 	if clamped then
 		idx = math.clamp(m, 1, size_m)
 		
 	else
-		assert(1 <= m and m <= size_m)
+		Check(InBoundary(m, 1, size_m), ThrowOutOfBoundError, "m", 1, m)
 		idx = m
 	end
 	
-	self._size[1] -= 1
-	return table.remove(self._entries, idx) :: any
+	self.size[1] -= 1
+	return table.remove(self.entries, idx) :: {number}
 end
 
--- Method: Inserts a column at `n`. Clamping is enabled by default.
-matrix.add_col = function(self: Matrix, n: number, fill: number, clamped: boolean?): boolean
-	assert(isMatrix(self))
-	assert(isNumber(n))
-	
-	fill = if isNumber(fill) then fill else 0
-	
-	local size_m, size_n = self._size[1], self._size[2]
+matrix_index.add_col = function(self: Matrix, n: number, fill: FillParameter?, clamped: boolean?): nil
+	local size_m, size_n = self.size[1], self.size[2]
 	local idx = 0
+	
 	if clamped then
 		idx = math.clamp(n, 1, size_n)
 		
 	else
-		assert(1 <= n and n <= size_n + 1)
+		Check(InBoundary(n, 1, size_n), ThrowOutOfBoundError, "n", 1, n)
 		idx = n
 	end
 	
-	for i = 1, size_m do
-		table.insert(self._entries[i], idx, fill)
+	if type(fill) == "table" then
+		for i = 1, size_m do
+			local val = rawget(fill, i)
+			table.insert(self.entries[i], idx, if isNumber(val::number) then val::number else 0)
+		end
+		
+	else
+		fill = if isNumber(fill::number) then fill else 0
+		
+		for i = 1, size_m do
+			table.insert(self.entries[i], idx, fill::number)
+		end
 	end
 	
-	self._size[2] += 1
-	return true
+	self.size[2] += 1
+	return nil
 end
 
--- Method: Removes the column at `m`. Clamping is enabled by default.
-matrix.clr_col = function(self: Matrix, n: number, clamped: boolean?): {number}
-	assert(isMatrix(self))
-	assert(isNumber(n))
-	
-	local size_m, size_n = self._size[1], self._size[2]
+matrix_index.clr_col = function(self: Matrix, n: number, clamped: boolean?): {number}
+	local size_m, size_n = self.size[1], self.size[2]
 	local idx = 0
 	if clamped then
 		idx = math.clamp(n, 1, size_n)
 		
 	else
-		assert(1 <= n and n <= size_n + 1)
+		Check(InBoundary(n, 1, size_n), ThrowOutOfBoundError, "n", 1, n)
 		idx = n
 	end
 	
 	local ret = {}
 	for i = 1, size_m do
-		local element = table.remove(self._entries[i], idx) :: number
+		local element = table.remove(self.entries[i], idx) :: number
 		table.insert(ret, element)
 	end
 	
+	self.size[2] -= 1
 	return ret
 end
 
--- Method: Returns the size of the `Matrix` object.
-matrix.get_size = function(self: Matrix): {number}
-	assert(isMatrix(self))
-	return self._size
+matrix_index.transpose = function(self: Matrix): Matrix
+	local m, n = self.size[1], self.size[2]
+	local entries = {}
+	
+	for i = 1, n do
+		entries[i] = {}
+		for j = 1, m do
+			entries[i][j] = self.entries[j][i]
+		end
+	end
+	
+	local new: Matrix = setmetatable({
+		entries = entries,
+		size = {n, m}
+	}, matrix_meta)
+	return new
 end
 
--- Method: Sets the size of the `Matrix` object. The `fill` parameter is used to set the new entries.
-matrix.set_size = function(self: Matrix, m: number, n: number, fill: number): boolean
-	assert(isMatrix(self))
+matrix_index.get_size = function(self: Matrix): SizeProperty
+	return self.size
+end
+
+matrix_index.set_size = function(self: Matrix, m: number, n: number, fill: number?): nil
+	fill = if isNumber(fill::number) then fill else 0
 	
-	fill = if isNumber(fill) then fill else 0
-	
-	local prev_m, prev_n = table.unpack(self._size)
+	local prev_m, prev_n = table.unpack(self.size)
 	
 	if m < prev_m then
 		for i = m + 1, prev_m do
-			self._entries[i] = nil
+			self.entries[i] = nil
 		end
 	end
 	
@@ -345,262 +304,233 @@ matrix.set_size = function(self: Matrix, m: number, n: number, fill: number): bo
 		if i > prev_m then
 			local new_col = table.create(n, fill)
 			local new_row = table.create(m, new_col)
-			table.move(new_row, 1, #new_row, prev_m, self._entries)
+			table.move(new_row, 1, #new_row, prev_m, self.entries)
 			break
+			
 		else
 			if n < prev_n then
 				for j = n + 1, prev_n do
-					self._entries[i][j] = nil
+					self.entries[i][j] = nil
 				end
 				
 			elseif n > prev_n then
 				for j = n + 1, prev_n do
-					self._entries[i][j] = fill
+					self.entries[i][j] = fill
 				end
 			end
 		end
 	end
 	
-	self._size[1] = m
-	self._size[2] = n
-	return true
+	self.size[1] = m
+	self.size[2] = n
+	return nil
 end
 
--- Method: Returns the value at the entry using `m` and `n` as coordinates.
-matrix.get_entry = function(self: Matrix, m: number, n: number): number
-	assert(isMatrix(self))
-	assert(isNumber(m) and 0 < m and m <= self._size[1])
-	assert(isNumber(n) and 0 < n and n <= self._size[2])
-	
-	return self._entries[m][n]
+matrix_index.get_entry = function(self: Matrix, m: number, n: number): number
+	return self.entries[m][n]
 end
 
--- Method: Sets the `value` at the entry using `m` and `n` as coordinates.
-matrix.set_entry = function(self: Matrix, value: number, m: number, n: number): boolean
-	assert(isMatrix(self))
-	assert(isNumber(value))
-	assert(isNumber(m) and 0 < m and m <= self._size[1])
-	assert(isNumber(n) and 0 < n and n <= self._size[2])
-	
-	self._entries[m][n] = value
-	return true
+
+matrix_index.set_entry = function(self: Matrix, value: number, m: number, n: number): nil
+	self.entries[m][n] = value
+	return nil
 end
 
--- Method: Performs the matrix transpose operation and returns a new `Matrix` object representing the transposed matrix.
-matrix.transpose = function(self: Matrix): Matrix
-	assert(isMatrix(self))
+
+-- MATRIX METATABLE --
+
+matrix_meta.__index = matrix_index
+matrix_meta.__metatable = "Matrix"
+
+matrix_meta.__add = function(a: Matrix, b: Matrix): Matrix
+	local size_A, size_B = a.size, b.size
 	
-	local m, n = self._size[1], self._size[2]
-	local new = {}
-	new._entries = {}
-	new._size = {n, m}
+	Check(#size_A == #size_B, ThrowInvalidSizeError)
+	Check(size_A[1] == size_B[1], ThrowInvalidSizeError)
+	Check(size_A[2] == size_B[2], ThrowInvalidSizeError)
 	
-	for i = 1, m do
-		new._entries[i] = {}
-		for j = 1, n do
-			new._entries[i][j] = self._entries[j][i]
+	local entries = table.create(size_A[1], nil::any)
+	for i = 1, size_A[1] do
+		entries[i] = {}
+		for j  = 1, size_A[2] do
+			entries[i][j] = a.entries[i][j] + b.entries[i][j]
 		end
 	end
 	
-	return setmetatable(new, matrix)
+	return setmetatable({
+		entries = entries,
+		size = {size_A[1], size_A[2]}
+	}, matrix_meta)
 end
 
-
--- ** MATRIX - METATABLE ** --
-
-matrix.__index = matrix
-
-matrix.__metatable = "Matrix"
-
-matrix.__add = function(a: Matrix, b: Matrix): Matrix
-	assert(isMatrix(a))
-	assert(isMatrix(b))
+matrix_meta.__sub = function(a: Matrix, b: Matrix): Matrix
+	local size_A, size_B = a.size, b.size
 	
-	local size_a = a._size
-	local size_b = b._size
+	Check(#size_A == #size_B, ThrowInvalidSizeError)
+	Check(size_A[1] == size_B[1], ThrowInvalidSizeError)
+	Check(size_A[2] == size_B[2], ThrowInvalidSizeError)
 	
-	assert(#size_a == #size_b)
-	assert(size_a[1] == size_b[1])
-	assert(size_a[2] == size_b[2])
-	
-	local m, n = size_a[1], size_a[2]
-	
-	local new = {}
-	new._entries = {}
-	new._size = {m, n}
-	
-	for i = 1, size_a[1] do
-		new._entries[i] = {}
-		for j  = 1, size_a[2] do
-			new._entries[i][j] = a._entries[i][j] + b._entries[i][j]
+	local entries = table.create(size_A[1], nil::any)
+	for i = 1, size_A[1] do
+		entries[i] = {}
+		for j  = 1, size_A[2] do
+			entries[i][j] = a.entries[i][j] - b.entries[i][j]
 		end
 	end
 	
-	return setmetatable(new, matrix)
+	return setmetatable({
+		entries = entries,
+		size = {size_A[1], size_A[2]}
+	}, matrix_meta)
 end
 
-matrix.__sub = function(a: Matrix, b: Matrix): Matrix
-	return a + (-1)*b
-end
-
-matrix.__mul = function(a: Matrix | number, b: Matrix | number): Matrix
-	local is_num_A, is_matrix_A = isNumber(a::number), isMatrix(a::Matrix)
-	local is_num_B, is_matrix_B = isNumber(b::number), isMatrix(b::Matrix)
+matrix_meta.__mul = function(a: Matrix | number, b: Matrix | number): Matrix
+	local is_num_A, is_matrix_A = isNumber(a::number), isPossibleMatrix(a::Matrix)
+	local is_num_B, is_matrix_B = isNumber(b::number), isPossibleMatrix(b::Matrix)
 	
-	assert(is_num_A or is_matrix_A)
-	assert(is_num_B or is_matrix_B)
+	Check(is_num_A or is_matrix_A, ThrowTypeError, "Matrix | number", "a", 1, a)
+	Check(is_num_B or is_matrix_B, ThrowTypeError, "Matrix | number", "b", 2, b)
 	
 	if is_num_A or is_num_B then
 		if is_num_A then
 			a, b = b, a
 		end
-		
 		a = a :: Matrix
 		b = b :: number
 		
-		local size_A = a._size
+		local size_A = a.size
 		local m, n = size_A[1], size_A[2]
 		
-		local new = {}
-		new._entries = {}
-		new._size = {m, n}
+		local entries = table.create(m, nil::any)
 		
 		for i = 1, m do
-			new._entries[i] = {}
+			entries[i] = {}
 			for j = 1, n do
-				new._entries[i][j] = a._entries[i][j] * b
+				entries[i][j] = a.entries[i][j] * b
 			end
 		end
 		
-		return setmetatable(new, matrix)
+		return setmetatable({
+			entries = entries,
+			size = {m, n}
+		}, matrix_meta)
 		
 	else
 		a = a :: Matrix
 		b = b :: Matrix
 		
-		local size_A = a._size
-		local size_B = b._size
+		local size_A = a.size
+		local size_B = b.size
 		
-		assert(#size_A == #size_B)
-		assert(size_A[2] == size_B[1])
+		Check(#size_A == #size_B, ThrowInvalidSizeError)
+		Check(size_A[2] == size_B[1], ThrowInvalidSizeError)
 		
 		local m, p = size_A[1], size_B[2]
-		
-		local new = {}
-		new._entries = {}
-		new._size = {m, p}
+		local entries = {}
 		
 		for i = 1, m do
-			new._entries[i] = {}
+			entries[i] = {}
 			for j = 1, p do
 				local res = 0
-				
 				for r = 1, p do
-					res += a._entries[i][r] * b._entries[r][j]
+					res += a.entries[i][r] * b.entries[r][j]
 				end
-				new._entries[i][j] = res
+				entries[i][j] = res
 			end
 		end
 		
-		return setmetatable(new, matrix)
+		return setmetatable({
+			entries = entries,
+			size = {m, p}
+		}, matrix_meta)
 	end
 end
 
 
--- ** STATIC MATRIX OBJECT ** --
--- ** STATIC MATRIX - METHODS ** --
+-- STATIC METHOD --
 
--- Method: Returns the size of the `StaticMatrix` object.
-static.get_size = function(self: StaticMatrix): {number}
-	assert(isStaticMatrix(self))
-	return self._size
-end
-
--- Method: Returns the value at the entry using `m` and `n` as coordinates.
-static.get_entry = function(self: StaticMatrix, m: number, n: number): number
-	assert(isStaticMatrix(self))
-	assert(isNumber(m) and 0 < m and m <= self._size[1])
-	assert(isNumber(n) and 0 < n and n <= self._size[2])
-	
-	local size_n = self._size[2]
-	local idx = size_n * (m - 1) + n
-	return self._entries[idx]
-end
-
--- Method: Sets the `value` at the entry using `m` and `n` as coordinates.
-static.set_entry = function(self: StaticMatrix, value: number, m: number, n: number): boolean
-	assert(isStaticMatrix(self))
-	assert(isNumber(value))
-	assert(isNumber(m) and 0 < m and m <= self._size[1])
-	assert(isNumber(n) and 0 < n and n <= self._size[2])
-	
-	local size_n = self._size[2]
-	local idx = size_n * (m - 1) + n
-	self._entries[idx] = value
-	return true
-end
-
--- Method: Performs the matrix transpose operation and returns a new `StaticMatrix` object representing the transposed matrix.
-static.transpose = function(self: StaticMatrix): StaticMatrix
-	assert(isStaticMatrix(self))
-	
-	local m, n = self._size[1], self._size[2]
-	local new = {}
-	new._entries = table.create(m * n, 0)
-	new._size = {n, m}
-	
+static_index.transpose = function(self: StaticMatrix): StaticMatrix
+	local m, n = self.size[1], self.size[2]
+	local entries = table.create(m * n, nil::any)
 	for i = 1, n do
 		for j = 1, m do
 			local i_j = m * (i - 1) + j
 			local j_i = n * (j - 1) + i
-			new._entries[i_j] = self._entries[j_i]
+			entries[i_j] = self.entries[j_i]
 		end
 	end
 	
-	return setmetatable(new, static)
+	return setmetatable({
+		entries = entries,
+		size = {n, m}
+	}, static_meta)
+end
+
+static_index.get_size = function(self: StaticMatrix): SizeProperty
+	return self.size
+end
+
+static_index.get_entry = function(self: StaticMatrix, m: number, n: number): number
+	return self.entries[self.size[2] * (m - 1) + n]
+end
+
+static_index.set_entry = function(self: StaticMatrix, value: number, m: number, n: number): nil
+	self.entries[self.size[2] * (m - 1) + n] = value
+	return nil
 end
 
 
--- ** STATIC MATRIX - METATABLE ** --
+-- STATIC METATABLE --
 
-static.__index = static
+static_meta.__index = static_index
+static_meta.__metatable = "Static"
 
-static.__metatable = "StaticMatrix"
-
-static.__add = function(a: StaticMatrix, b: StaticMatrix): StaticMatrix
-	assert(isStaticMatrix(a))
-	assert(isStaticMatrix(b))
+static_meta.__add = function(a: StaticMatrix, b: StaticMatrix): StaticMatrix
+	local size_A, size_B = a.size, b.size
 	
-	local size_a = a._size
-	local size_b = b._size
+	Check(#size_A == #size_B, ThrowInvalidSizeError)
+	Check(size_A[1] == size_B[1], ThrowInvalidSizeError)
+	Check(size_A[2] == size_B[2], ThrowInvalidSizeError)
 	
-	assert(#size_a == #size_b)
-	assert(size_a[1] == size_b[1])
-	assert(size_a[2] == size_b[2])
-	
-	local m, n = size_a[1], size_a[2]
-	
-	local new = {}
-	new._entries = table.create(m * n, 0)
-	new._size = {m, n}
+	local m, n = size_A[1], size_A[2]
+	local entries = table.create(m * n, nil::any)
 	
 	for idx = 1, m * n do
-		new._entries[idx] = a._entries[idx] + b._entries[idx]
+		entries[idx] = a.entries[idx] + b.entries[idx]
 	end
 	
-	return setmetatable(new, static)
+	return setmetatable({
+		entries = entries,
+		size = {m, n}
+	}, static_meta)
 end
 
-static.__sub = function(a: StaticMatrix, b: StaticMatrix): StaticMatrix
-	return a + (-1)*b
-end
-
-static.__mul = function(a: StaticMatrix | number, b: StaticMatrix | number): StaticMatrix
-	local is_num_A, is_matrix_A = isNumber(a::number), isStaticMatrix(a::StaticMatrix)
-	local is_num_B, is_matrix_B = isNumber(b::number), isStaticMatrix(b::StaticMatrix)
+static_meta.__sub = function(a: StaticMatrix, b: StaticMatrix): StaticMatrix
+	local size_A, size_B = a.size, b.size
 	
-	assert(is_num_A or is_matrix_A)
-	assert(is_num_B or is_matrix_B)
+	Check(#size_A == #size_B, ThrowInvalidSizeError)
+	Check(size_A[1] == size_B[1], ThrowInvalidSizeError)
+	Check(size_A[2] == size_B[2], ThrowInvalidSizeError)
+	
+	local m, n = size_A[1], size_A[2]
+	local entries = table.create(m * n, nil::any)
+	
+	for idx = 1, m * n do
+		entries[idx] = a.entries[idx] - b.entries[idx]
+	end
+	
+	return setmetatable({
+		entries = entries,
+		size = {m, n}
+	}, static_meta)
+end
+
+static_meta.__mul = function(a: StaticMatrix | number, b: StaticMatrix | number): StaticMatrix
+	local is_num_A, is_static_A = isNumber(a::number), isPossibleStaticMatrix(a::StaticMatrix)
+	local is_num_B, is_static_B = isNumber(b::number), isPossibleStaticMatrix(b::StaticMatrix)
+	
+	Check(is_num_A or is_static_A, ThrowTypeError, "Matrix | number", "a", 1, a)
+	Check(is_num_B or is_static_B, ThrowTypeError, "Matrix | number", "b", 2, b)
 	
 	if is_num_A or is_num_B then
 		if is_num_A then
@@ -610,34 +540,30 @@ static.__mul = function(a: StaticMatrix | number, b: StaticMatrix | number): Sta
 		a = a :: StaticMatrix
 		b = b :: number
 		
-		local size_A = a._size
+		local size_A = a.size
 		local m, n = size_A[1], size_A[2]
-		
-		local new = {}
-		new._entries = table.create(m * n, 0)
-		new._size = {m, n}
+		local entries = table.create(m * n, nil::any)
 		
 		for idx = 1, m * n do
-			new._entries[idx] = a._entries[idx] * b
+			entries[idx] = a.entries[idx] * b
 		end
 		
-		return setmetatable(new, static)
+		return setmetatable({
+			entries = entries,
+			size = {m, n}
+		}, static_meta)
 		
 	else
 		a = a :: StaticMatrix
 		b = b :: StaticMatrix
 		
-		local size_A = a._size
-		local size_B = b._size
+		local size_A, size_B = a.size, b.size
 		
-		assert(#size_A == #size_B)
-		assert(size_A[2] == size_B[1])
+		Check(#size_A == #size_B, ThrowInvalidSizeError)
+		Check(size_A[2] == size_B[1], ThrowInvalidSizeError)
 		
 		local m, n, p = size_A[1], size_A[2], size_B[2]
-		
-		local new = {}
-		new._entries = table.create(m * p, 0)
-		new._size = {m, p}
+		local entries = table.create(m * p, nil::any)
 		
 		for i = 1, m * p do
 			local val = 0
@@ -645,14 +571,162 @@ static.__mul = function(a: StaticMatrix | number, b: StaticMatrix | number): Sta
 			local col = (i - 1) % p + 1
 			
 			for j = 1, n do
-				val += a._entries[(row - 1) * n + j] * b._entries[p * (j - 1) + col]
+				val += a.entries[(row - 1) * n + j] * b.entries[p * (j - 1) + col]
 			end
 			
-			new._entries[i] = val
+			entries[i] = val
 		end
 		
-		return setmetatable(new, static)
+		return setmetatable({
+			entries = entries,
+			size = {m, p}
+		}, static_meta)
 	end
 end
+
+
+-- TENSOR METHOD --
+
+-- TBA
+
+
+-- TENSOR METATABLE --
+
+tensor_meta.__index = tensor_index
+tensor_meta.__metatable = "Tensor"
+
+
+-- MODULE --
+
+local module: Module = {
+	--[[
+		Constructor: Creates a new `Matrix` object.
+		Provides basic arithmetic operations, row operations, and resize operations.
+		Requires more memory space for time efficiency to perform resizing.
+	]]
+	newMatrix = function(fill: Matrix_FillParameter, m: number, n: number): Matrix
+		local entries = {}
+		
+		if type(fill) == "table" then
+			for i = 1, m do
+				entries[i] = table.create(n, 0)
+				
+				for j = 1, n do
+					local row = rawget(fill, i)
+					local num = if type(row) == "table" then rawget(row, j) else 0
+					num = if isNumber(num::number) then num else 0
+					entries[i][j] = num
+				end
+			end
+			
+		else
+			fill = if isNumber(fill::number) then fill else 0
+			
+			for i = 1, m do
+				entries[i] = table.create(n, fill)
+			end
+		end
+		
+		local self: Matrix = setmetatable({
+			entries = entries,
+			size = {m, n}
+		}, matrix_meta)
+		return self
+	end,
+	
+	-- Constructor: Creates a new `StaticMatrix` object.
+	
+	--[[
+		Constructor: Creates a new `StaticMatrix` object.
+		Provides basic arithmetic operations and row operations.
+		Requires less memory space for no resizing.
+	]]
+	newStaticMatrix = function(fill: StaticMatrix_FillParameter, m: number, n: number): StaticMatrix
+		local entries = {}
+		
+		if type(fill) == "table" then
+			for i = 1, m do
+				entries[i] = rawget(fill, i) or 0
+			end
+			
+		else
+			fill = if isNumber(fill::number) then fill else 0
+			entries = table.create(m * n, fill)
+		end
+		
+		local self: StaticMatrix = setmetatable({
+			entries = entries,
+			size = {}
+		}, static_meta)
+		return self
+	end,
+	
+	--[[
+		Constructor: Creates a `Tensor` object.
+		As of v1.1.0, this object only serves as a shorthand to create N-dimension arrays.
+		More functionalities will be added.
+	]]
+	newTensor = function(fill: Tensor_FillParameter, ...: number): Tensor
+		local size = {...}
+		
+		local function helper(curr_arr: Tensor_EntriesProperty, curr_depth: number): Tensor_EntriesProperty
+			if curr_depth == #size then
+				return table.create(size[curr_depth], fill)
+			end
+			
+			for idx = 1, size[curr_depth] do
+				curr_arr[idx] = helper({}, curr_depth + 1)
+			end
+			
+			return curr_arr
+		end
+		
+		local function helper_2(curr_arr: Tensor_EntriesProperty, curr_depth: number, curr_fill: Tensor_FillParameter): Tensor_EntriesProperty
+			if curr_depth == #size then
+				if type(curr_fill) == "table" then
+					local new = table.create(size[curr_depth], 0)
+					for idx = 1, size[curr_depth] do
+						local val = rawget(curr_fill, idx)
+						val = if isNumber(val::number) then val else 0
+						new[idx] = val :: number
+					end
+					return new :: Tensor_EntriesProperty
+					
+				else
+					curr_fill = if isNumber(curr_fill::number) then curr_fill else 0
+					return table.create(size[curr_depth], curr_fill) :: Tensor_EntriesProperty
+				end
+			end
+			
+			curr_fill = if type(curr_fill) == "table" then curr_fill else 0
+			
+			for idx = 1, size[curr_depth] do
+				if type(curr_fill) == "table" then
+					curr_arr[idx] = helper_2({}, curr_depth + 1, rawget(curr_fill, idx)::Tensor_FillParameter)
+					
+				else
+					curr_arr[idx] = helper_2({}, curr_depth + 1, curr_fill)
+				end
+			end
+			
+			return curr_arr
+		end
+		
+		if type(fill) == "table" then
+			
+			
+			return setmetatable({
+				entries = helper_2({}, 1, fill),
+				size = size
+			}, tensor_meta)
+			
+		else
+			return setmetatable({
+				entries = helper({}, 1),
+				size = size
+			}, tensor_meta)
+		end
+	end
+}
 
 return module
