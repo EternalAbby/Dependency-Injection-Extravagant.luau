@@ -3,11 +3,14 @@
 --!native
 
 -- TODO: [VERSION 1.1.0] Implement row operations for `StaticMatrix` objects.
--- TODO: [VERSION 1.1.0] Implement special operations that are valid for Square Matrix.
+-- TODO: [VERSION 1.1.0] Implement special operations that are valid for Square Matrix for `StaticMatrix` objects.
 -- TODO: [VERSION 1.1.0] Add function descriptions.
+-- TODO: [VERSION 1.1.0] [?] Update Wiki.
 
 -- TODO: [VERSION 1.2.0] Allow object interactions.
 -- TODO: [VERSION 1.2.0] Implement operations on `Tensor`.
+-- TODO: [VERSION 1.2.0] Implement logical matrix, aka (0,1)-matrix, used in boolean algebra.
+-- TODO: [VERSION 1.2.0] [?] Implement data compression via serialize/deserialize functions.
 
 
 -- INTERNAL VARIABLE --
@@ -39,6 +42,10 @@ type Matrix_Method = {
 	row_add: (self: Matrix, at: number, with: number) -> nil,
 	row_mul: (self: Matrix, at: number, with: number) -> nil,
 	row_switch: (self: Matrix, at: number, with: number) -> nil,
+	
+	sq_diagonal: (self: Matrix) -> Matrix,
+	sq_lower_triangular: (self: Matrix) -> Matrix,
+	sq_upper_triangular: (self: Matrix) -> Matrix,
 	
 	transpose: (self: Matrix) -> Matrix,
 	
@@ -108,7 +115,10 @@ export type Tensor = setmetatable<{
 type Module = {
 	newMatrix: (fill: Matrix_FillParameter, m: number, n: number) -> Matrix,
 	newStaticMatrix: (fill: StaticMatrix_FillParameter, m: number, n: number) -> StaticMatrix,
-	newTensor: (fill: Tensor_FillParameter, ...number) -> Tensor
+	newTensor: (fill: Tensor_FillParameter, ...number) -> Tensor,
+	
+	identityMatrix: (n: number) -> Matrix,
+	identityStaticMatrix: (n: number) -> StaticMatrix
 }
 
 
@@ -123,9 +133,15 @@ local function isPossibleMatrix(candidate: Matrix): boolean
 	return type(candidate) == "table" and getmetatable(candidate) == "Matrix" and type(candidate.entries) == "table" and type(candidate.size) == "table"
 end
 
--- A very loose surface check for `Matrix` objects. Only checks for data type of object and properties and the metatable. Does not check further into the `.entries` property.
+-- A very loose surface check for `StaticMatrix` objects. Only checks for data type of object and properties and the metatable. Does not check further into the `.entries` property.
 local function isPossibleStaticMatrix(candidate: StaticMatrix): boolean
 	return type(candidate) == "table" and getmetatable(candidate) == "StaticMatrix" and type(candidate.entries) == "table" and type(candidate.size) == "table"
+end
+
+-- A very loose surface check for a candidate object represented as a square matrix.
+local function isPossibleSquareMatrix(candidate: Matrix | StaticMatrix): boolean
+	return candidate.size[1] == candidate.size[2]
+		and #candidate.entries == candidate.size[1]
 end
 
 local function ThrowTypeError(expected_type: string, arg_name: string, arg_idx: number, arg_val: any): nil
@@ -326,6 +342,64 @@ matrix_index.row_switch = function(self: Matrix, at: number, with: number): nil
 	entries[at], entries[with] = entries[with], entries[at]
 	
 	return nil
+end
+
+matrix_index.sq_diagonal = function(self: Matrix): Matrix
+	Check(isPossibleMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	
+	local n = self.size[1]
+	local entries = table.create(n, nil::any)
+	
+	for i = 1, n do
+		entries[i] = table.create(n, 0)
+		entries[i][i] = self.entries[i][i]
+	end
+	
+	return setmetatable({
+		entries = entries,
+		size = {n, n}
+	}, matrix_meta)
+end
+
+matrix_index.sq_lower_triangular = function(self: Matrix): Matrix
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	
+	local n = self.size[1]
+	local entries = table.create(n, nil::any)
+	
+	for i = 1, n do
+		entries[i] = table.create(n, 0)
+		
+		for j = 1, i do
+			entries[i][j] = self.entries[i][j]
+		end
+	end
+	
+	return setmetatable({
+		entries = entries,
+		size = {n, n}
+	}, matrix_meta)
+end
+
+matrix_index.sq_upper_triangular = function(self: Matrix): Matrix
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	
+	local n = self.size[1]
+	local entries = table.create(n, nil::any)
+	
+	for i = 1, n do
+		entries[i] = table.create(n, 0)
+		
+		for j = i, n do
+			entries[i][j] = self.entries[i][j]
+		end
+	end
+	
+	return setmetatable({
+		entries = entries,
+		size = {n, n}
+	}, matrix_meta)
 end
 
 matrix_index.transpose = function(self: Matrix): Matrix
@@ -786,6 +860,39 @@ local module: Module = {
 				size = size
 			}, tensor_meta)
 		end
+	end,
+	
+	--[[
+		Constructor: Creates a `Matrix` object in the form of an identity matrix.
+	]]
+	identityMatrix = function(n: number): Matrix
+		local entries = table.create(n, nil::any)
+		
+		for i = 1, n do
+			entries[i] = table.create(n, 0)
+			entries[i][i] = 1
+		end
+		
+		return setmetatable({
+			entries = entries,
+			size = {n, n}
+		}, matrix_meta)
+	end,
+	
+	--[[
+		Constructor: Creates a `StaticMatrix` object in the form of an identity matrix.
+	]]
+	identityStaticMatrix = function(n: number): StaticMatrix
+		local entries = table.create(n * n, 0)
+		
+		for i = 1, n do
+			entries[n * (i - 1) + i] = 1
+		end
+		
+		return setmetatable({
+			entries = entries,
+			size = {n, n}
+		}, static_meta)
 	end
 }
 
