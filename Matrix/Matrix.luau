@@ -73,6 +73,14 @@ type StaticMatrix_EntriesProperty = {[number]: number}
 type StaticMatrix_FillParameter = number | StaticMatrix_EntriesProperty
 
 type StaticMatrix_Method = {
+	row_add: (self: StaticMatrix, at: number, with: number) -> nil,
+	row_mul: (self: StaticMatrix, at: number, with: number) -> nil,
+	row_switch: (self: StaticMatrix, at: number, with: number) -> nil,
+	
+	sq_diagonal: (self: StaticMatrix) -> StaticMatrix,
+	sq_lower_triangular: (self: StaticMatrix) -> StaticMatrix,
+	sq_upper_triangular: (self: StaticMatrix) -> StaticMatrix,
+	
 	transpose: (self: StaticMatrix) -> StaticMatrix,
 	
 	get_size: (self: StaticMatrix) -> SizeProperty,
@@ -583,6 +591,48 @@ end
 
 -- STATIC METHOD --
 
+static_index.row_add = function(self: StaticMatrix, at: number, with: number): nil
+	return nil
+end
+
+static_index.row_mul = function(self: StaticMatrix, at: number, with: number): nil
+	return nil
+end
+
+static_index.row_switch = function(self: StaticMatrix, at: number, with: number): nil
+	return nil
+end
+
+static_index.sq_diagonal = function(self: StaticMatrix): StaticMatrix
+	local n = self.size[1]
+	local entries = {}
+	
+	return setmetatable({
+		entries = entries,
+		size = table.freeze({n, n})
+	}, static_meta)
+end
+
+static_index.sq_lower_triangular = function(self: StaticMatrix): StaticMatrix
+	local n = self.size[1]
+	local entries = {}
+	
+	return setmetatable({
+		entries = entries,
+		size = table.freeze({n, n})
+	}, static_meta)
+end
+
+static_index.sq_upper_triangular = function(self: StaticMatrix): StaticMatrix
+	local n = self.size[1]
+	local entries = {}
+	
+	return setmetatable({
+		entries = entries,
+		size = table.freeze({n, n})
+	}, static_meta)
+end
+
 static_index.transpose = function(self: StaticMatrix): StaticMatrix
 	local m, n = self.size[1], self.size[2]
 	local entries = table.create(m * n, nil::any)
@@ -790,7 +840,7 @@ local module: Module = {
 		
 		local self: StaticMatrix = setmetatable({
 			entries = entries,
-			size = {}
+			size = table.freeze({m, n})
 		}, static_meta)
 		return self
 	end,
@@ -863,7 +913,7 @@ local module: Module = {
 	end,
 	
 	--[[
-		Constructor: Creates a `Matrix` object in the form of an identity matrix.
+		Constructor: Creates a `Matrix` object in the form of an n-by-n identity matrix.
 	]]
 	identityMatrix = function(n: number): Matrix
 		local entries = table.create(n, nil::any)
@@ -880,7 +930,7 @@ local module: Module = {
 	end,
 	
 	--[[
-		Constructor: Creates a `StaticMatrix` object in the form of an identity matrix.
+		Constructor: Creates a `StaticMatrix` object in the form of an n-by-n identity matrix.
 	]]
 	identityStaticMatrix = function(n: number): StaticMatrix
 		local entries = table.create(n * n, 0)
@@ -891,7 +941,7 @@ local module: Module = {
 		
 		return setmetatable({
 			entries = entries,
-			size = {n, n}
+			size = table.freeze({n, n})
 		}, static_meta)
 	end
 }
