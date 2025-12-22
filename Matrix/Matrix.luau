@@ -2,14 +2,19 @@
 --!optimize 2
 --!native
 
--- TODO: [VERSION 1.1.0] Implement row operations for `StaticMatrix` objects.
--- TODO: [VERSION 1.1.0] Implement special operations that are valid for Square Matrix for `StaticMatrix` objects.
+-- TODO: [VERSION 1.1.0] Implement matrix determinant.
 -- TODO: [VERSION 1.1.0] Add function descriptions.
 -- TODO: [VERSION 1.1.0] [?] Update Wiki.
 
+-- TODO: [VERSION 1.2.0] Implement different variants of matrix multiplication.
+-- TODO: [VERSION 1.2.0] `Vector` type. A special object type of `Matrix`. Different from `vector` data type.
+-- TODO: [VERSION 1.2.0] Adjugate matrix.
+-- TODO: [VERSION 1.2.0] Orthogonal matrix.
 -- TODO: [VERSION 1.2.0] Allow object interactions.
 -- TODO: [VERSION 1.2.0] Implement operations on `Tensor`.
 -- TODO: [VERSION 1.2.0] Implement logical matrix, aka (0,1)-matrix, used in boolean algebra.
+-- TODO: [VERSION 1.2.0] Improve matrix determinant operations by using Tri-diagonal matrix algorithm (Thomas's algorithm) for speedup in special case.
+-- TODO: [VERSION 1.2.0] [?] Implement Gaussian Elimination as a standalone method.
 -- TODO: [VERSION 1.2.0] [?] Implement data compression via serialize/deserialize functions.
 
 
@@ -40,12 +45,17 @@ type Matrix_Method = {
 	clr_col: (self: Matrix, n: number, clamped: boolean?) -> {number},
 	
 	row_add: (self: Matrix, at: number, with: number) -> nil,
+	row_sub: (self: Matrix, at: number, with: number) -> nil,
 	row_mul: (self: Matrix, at: number, with: number) -> nil,
+	row_fma: (self: Matrix, at: number, with: number, times: number) -> nil,
 	row_switch: (self: Matrix, at: number, with: number) -> nil,
 	
 	sq_diagonal: (self: Matrix) -> Matrix,
 	sq_lower_triangular: (self: Matrix) -> Matrix,
 	sq_upper_triangular: (self: Matrix) -> Matrix,
+	
+	trace: (self: Matrix) -> number,
+	determinant: (self: Matrix) -> number,
 	
 	transpose: (self: Matrix) -> Matrix,
 	
@@ -74,12 +84,17 @@ type StaticMatrix_FillParameter = number | StaticMatrix_EntriesProperty
 
 type StaticMatrix_Method = {
 	row_add: (self: StaticMatrix, at: number, with: number) -> nil,
+	row_sub: (self: StaticMatrix, at: number, with: number) -> nil,
 	row_mul: (self: StaticMatrix, at: number, with: number) -> nil,
+	row_fma: (self: StaticMatrix, at: number, with: number, times: number) -> nil,
 	row_switch: (self: StaticMatrix, at: number, with: number) -> nil,
 	
 	sq_diagonal: (self: StaticMatrix) -> StaticMatrix,
 	sq_lower_triangular: (self: StaticMatrix) -> StaticMatrix,
 	sq_upper_triangular: (self: StaticMatrix) -> StaticMatrix,
+	
+	trace: (self: StaticMatrix) -> number,
+	determinant: (self: StaticMatrix) -> number,
 	
 	transpose: (self: StaticMatrix) -> StaticMatrix,
 	
@@ -207,6 +222,18 @@ local function Check(expression: boolean, err_func: (...any) -> nil, ...: any): 
 	return nil
 end
 
+local function Matrix_EntriesDeepCopy(candidate: Matrix): Matrix_EntriesProperty
+	local entries, size = candidate.entries, candidate.size
+	local m, n = size[1], size[2]
+	local result = table.create(m, nil::any)
+	
+	for i = 1, m do
+		result[i] = table.move(entries[i], 1, n, 1, {})
+	end
+	
+	return result
+end
+
 
 -- MATRIX METHOD --
 
@@ -316,8 +343,23 @@ matrix_index.row_add = function(self: Matrix, at: number, with: number): nil
 	
 	local entries_at, entries_with = self.entries[at], self.entries[with]
 	
-	for col_idx = 1, rawlen(entries_at) do
-		entries_at[col_idx] = entries_at[col_idx] + entries_with[col_idx]
+	for col_idx = 1, size[2] do
+		entries_at[col_idx] += entries_with[col_idx]
+	end
+	
+	return nil
+end
+
+matrix_index.row_sub = function(self: Matrix, at: number, with: number): nil
+	local size = self.size
+	
+	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
+	
+	local entries_at, entries_with = self.entries[at], self.entries[with]
+	
+	for col_idx = 1, size[2] do
+		entries_at[col_idx] -= entries_with[col_idx]
 	end
 	
 	return nil
@@ -332,8 +374,26 @@ matrix_index.row_mul = function(self: Matrix, at: number, with: number): nil
 	
 	local entries_at = self.entries[at]
 	
-	for col_idx = 1, rawlen(entries_at) do
+	for col_idx = 1, size[2] do
 		entries_at[col_idx] *= with
+	end
+	
+	return nil
+end
+
+-- does not perform any rounding in the source code
+matrix_index.row_fma = function(self: Matrix, at: number, with: number, times: number): nil
+	local size = self.size
+	
+	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(isNumber(with), ThrowTypeError, "number", "with", 3, with)
+	Check(isNumber(times), ThrowTypeError, "number", "times", 4, times)
+	Check(times ~= 0, ThrowRowMulByZeroError)
+	
+	local entries_at, entries_with = self.entries[at], self.entries[with]
+	
+	for col_idx = 1, size[2] do
+		entries_at[col_idx] += entries_with[col_idx] * times
 	end
 	
 	return nil
@@ -353,7 +413,7 @@ matrix_index.row_switch = function(self: Matrix, at: number, with: number): nil
 end
 
 matrix_index.sq_diagonal = function(self: Matrix): Matrix
-	Check(isPossibleMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	Check(isPossibleMatrix(self), ThrowTypeError, "Matrix", "self", 1, self)
 	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
 	
 	local n = self.size[1]
@@ -371,6 +431,7 @@ matrix_index.sq_diagonal = function(self: Matrix): Matrix
 end
 
 matrix_index.sq_lower_triangular = function(self: Matrix): Matrix
+	Check(isPossibleMatrix(self), ThrowTypeError, "Matrix", "self", 1, self)
 	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
 	
 	local n = self.size[1]
@@ -391,6 +452,7 @@ matrix_index.sq_lower_triangular = function(self: Matrix): Matrix
 end
 
 matrix_index.sq_upper_triangular = function(self: Matrix): Matrix
+	Check(isPossibleMatrix(self), ThrowTypeError, "Matrix", "self", 1, self)
 	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
 	
 	local n = self.size[1]
@@ -408,6 +470,75 @@ matrix_index.sq_upper_triangular = function(self: Matrix): Matrix
 		entries = entries,
 		size = {n, n}
 	}, matrix_meta)
+end
+
+matrix_index.trace = function(self: Matrix): number
+	Check(isPossibleMatrix(self), ThrowTypeError, "Matrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	
+	local n = self.size[1]
+	local entries = self.entries
+	local res = 0
+	
+	for i = 1, n do
+		res += entries[i][i]
+	end
+	
+	return res
+end
+
+matrix_index.determinant = function(self: Matrix): number
+	Check(isPossibleMatrix(self), ThrowTypeError, "Matrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	
+	-- for 2x2 and 3x3, apply rule of Sarrus instead
+	
+	-- here's the strategy
+	-- step 1 - gaussian elimination
+	-- [1] greedily find the maximum pivot, select that row
+	-- [2] move to the topmost row that is not computed already, aka topmost row that still holds row echelon form
+	-- [3] solve for coefficient such that subtracting (self*coefficient) into other rows below result in their pivot = 0
+	-- [4] continue until last row is computed from [3]
+	-- [5] result should be row echelon form
+	
+	-- also consider tri-diagonal matrix algorithm (thomas algorithm) for speedup
+	
+	-- step 2 - compute product of diagonal matrix from step 1
+	-- pretty much trivial and obvious
+	
+	-- step 3 - keep track of changes to determinant
+	-- this is done in parallel with step 1
+	-- look up how determinant is changed from the row operations
+	-- keep track of that
+	-- then divide step 2 by this variable
+	
+	-- that's it, return the result
+	
+	local n = self.size[1]
+	
+	if n == 2 then
+		local entries = self.entries
+		return    entries[1][1] * entries[2][2]
+				- entries[1][2] * entries[2][1]
+		
+	elseif n == 3 then
+		local entries = self.entries
+		return    entries[1][1] * entries[2][2] * entries[3][3]
+				+ entries[1][2] * entries[2][3] * entries[3][1]
+				+ entries[1][3] * entries[2][1] * entries[3][2]
+				- entries[1][3] * entries[2][2] * entries[3][1]
+				- entries[1][2] * entries[2][1] * entries[3][3]
+				- entries[1][1] * entries[2][3] * entries[3][2]
+		
+	else
+		
+		local entries = Matrix_EntriesDeepCopy(self)
+		
+		-- TBA
+		
+	end
+	
+	return -1
 end
 
 matrix_index.transpose = function(self: Matrix): Matrix
@@ -592,20 +723,96 @@ end
 -- STATIC METHOD --
 
 static_index.row_add = function(self: StaticMatrix, at: number, with: number): nil
+	local size = self.size
+	
+	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
+	
+	local n = size[2]
+	local entries = self.entries
+	
+	for col_idx = 1, n do
+		entries[n * (at - 1) + col_idx] += entries[n * (with - 1) + col_idx]
+	end
+	
+	return nil
+end
+
+static_index.row_sub = function(self: StaticMatrix, at: number, with: number): nil
+	local size = self.size
+	
+	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
+	
+	local n = size[2]
+	local entries = self.entries
+	
+	for col_idx = 1, n do
+		entries[n * (at - 1) + col_idx] -= entries[n * (with - 1) + col_idx]
+	end
+	
 	return nil
 end
 
 static_index.row_mul = function(self: StaticMatrix, at: number, with: number): nil
+	local size = self.size
+	
+	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
+	Check(with ~= 0, ThrowRowMulByZeroError)
+	
+	local n = size[2]
+	local entries = self.entries
+	
+	for col_idx = 1, n do
+		entries[n * (at - 1) + col_idx] *= with
+	end
+	
+	return nil
+end
+
+static_index.row_fma = function(self: StaticMatrix, at: number, with: number, times: number): nil
+	local size = self.size
+	
+	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
+	
+	local n = size[2]
+	local entries = self.entries
+	
+	for col_idx = 1, n do
+		entries[n * (at - 1) + col_idx] += entries[n * (with - 1) + col_idx] * times
+	end
+	
 	return nil
 end
 
 static_index.row_switch = function(self: StaticMatrix, at: number, with: number): nil
+	local size = self.size
+	
+	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
+	
+	local n = size[2]
+	local entries = self.entries
+	
+	for col_idx = 1, n do
+		entries[n * (at - 1) + col_idx], entries[n * (with - 1) + col_idx] = entries[n * (with - 1) + col_idx], entries[n * (at - 1) + col_idx]
+	end
+	
 	return nil
 end
 
 static_index.sq_diagonal = function(self: StaticMatrix): StaticMatrix
+	Check(isPossibleStaticMatrix(self), ThrowTypeError, "StaticMatrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	
 	local n = self.size[1]
-	local entries = {}
+	local entries = table.create(n * n, 0)
+	
+	for i = 1, n do
+		entries[n * (i - 1) + i] = self.entries[n * (i - 1) + i]
+	end
 	
 	return setmetatable({
 		entries = entries,
@@ -614,8 +821,17 @@ static_index.sq_diagonal = function(self: StaticMatrix): StaticMatrix
 end
 
 static_index.sq_lower_triangular = function(self: StaticMatrix): StaticMatrix
+	Check(isPossibleStaticMatrix(self), ThrowTypeError, "StaticMatrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	
 	local n = self.size[1]
-	local entries = {}
+	local entries = table.create(n * n, 0)
+	
+	for i = 1, n do
+		for j = 1, i do
+			entries[n * (i - 1) + j] = self.entries[n * (i - 1) + j]
+		end
+	end
 	
 	return setmetatable({
 		entries = entries,
@@ -624,13 +840,42 @@ static_index.sq_lower_triangular = function(self: StaticMatrix): StaticMatrix
 end
 
 static_index.sq_upper_triangular = function(self: StaticMatrix): StaticMatrix
+	Check(isPossibleStaticMatrix(self), ThrowTypeError, "StaticMatrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	
 	local n = self.size[1]
-	local entries = {}
+	local entries = table.create(n * n, 0)
+	
+	for i = 1, n do
+		for j = i, n do
+			entries[n * (i - 1) + j] = self.entries[n * (i - 1) + j]
+		end
+	end
 	
 	return setmetatable({
 		entries = entries,
 		size = table.freeze({n, n})
 	}, static_meta)
+end
+
+static_index.trace = function(self: StaticMatrix): number
+	Check(isPossibleStaticMatrix(self), ThrowTypeError, "StaticMatrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	
+	local n = self.size[1]
+	local entries = self.entries
+	local res = 0
+	
+	for i = 1, n do
+		res += entries[n * (i - 1) + i]
+	end
+	
+	return res
+end
+
+static_index.determinant = function(self: StaticMatrix): number
+	-- TBA
+	return -1
 end
 
 static_index.transpose = function(self: StaticMatrix): StaticMatrix
