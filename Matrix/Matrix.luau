@@ -2,8 +2,6 @@
 --!optimize 2
 --!native
 
--- TODO: [VERSION 1.1.0] Update Wiki.
-
 -- TODO: [VERSION 1.2.0] Change internal variables to follow the new module structure.
 -- TODO: [VERSION 1.2.0] Change internal error message displaying functions to return a closure. Function inlining may be profited.
 -- TODO: [VERSION 1.2.0] Implement different variants of matrix multiplication.
@@ -249,6 +247,8 @@ matrix_index.add_row = function(self: Matrix, m: number, fill: FillParameter?, c
 	local size_m, size_n = self.size[1], self.size[2]
 	local idx = 0
 	
+	m = if isNumber(m) then m else size_m + 1
+	
 	if clamped then
 		idx = math.clamp(m, 1, size_m + 1)
 		
@@ -282,6 +282,8 @@ matrix_index.clr_row = function(self: Matrix, m: number, clamped: boolean?): {nu
 	local size_m = self.size[1]
 	local idx = 0
 	
+	m = if isNumber(m) then m else size_m
+	
 	if clamped then
 		idx = math.clamp(m, 1, size_m)
 		
@@ -302,6 +304,8 @@ end
 matrix_index.add_col = function(self: Matrix, n: number, fill: FillParameter?, clamped: boolean?): nil
 	local size_m, size_n = self.size[1], self.size[2]
 	local idx = 0
+	
+	n = if isNumber(n) then n else size_n + 1
 	
 	if clamped then
 		idx = math.clamp(n, 1, size_n)
@@ -335,6 +339,9 @@ end
 matrix_index.clr_col = function(self: Matrix, n: number, clamped: boolean?): {number}
 	local size_m, size_n = self.size[1], self.size[2]
 	local idx = 0
+	
+	n = if isNumber(n) then n else size_n
+	
 	if clamped then
 		idx = math.clamp(n, 1, size_n)
 		
@@ -360,7 +367,11 @@ end
 matrix_index.row_add = function(self: Matrix, at: number, with: number): nil
 	local size = self.size
 	
+	Check(isPossibleMatrix(self), ThrowTypeError, "Matrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	Check(isNumber(at), ThrowTypeError, "number", "at", 2, at)
 	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(isNumber(with), ThrowTypeError, "number", "with", 3, with)
 	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
 	
 	local entries_at, entries_with = self.entries[at], self.entries[with]
@@ -382,7 +393,11 @@ end
 matrix_index.row_sub = function(self: Matrix, at: number, with: number): nil
 	local size = self.size
 	
+	Check(isPossibleMatrix(self), ThrowTypeError, "Matrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	Check(isNumber(at), ThrowTypeError, "number", "at", 2, at)
 	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(isNumber(with), ThrowTypeError, "number", "with", 3, with)
 	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
 	
 	local entries_at, entries_with = self.entries[at], self.entries[with]
@@ -401,6 +416,9 @@ end
 matrix_index.row_mul = function(self: Matrix, at: number, with: number): nil
 	local size = self.size
 	
+	Check(isPossibleMatrix(self), ThrowTypeError, "Matrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	Check(isNumber(at), ThrowTypeError, "number", "at", 2, at)
 	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
 	Check(isNumber(with), ThrowTypeError, "number", "with", 3, with)
 	Check(with ~= 0, ThrowRowMulByZeroError)
@@ -426,8 +444,12 @@ end
 matrix_index.row_fma = function(self: Matrix, at: number, with: number, times: number): nil
 	local size = self.size
 	
+	Check(isPossibleMatrix(self), ThrowTypeError, "Matrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	Check(isNumber(at), ThrowTypeError, "number", "at", 2, at)
 	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
 	Check(isNumber(with), ThrowTypeError, "number", "with", 3, with)
+	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
 	Check(isNumber(times), ThrowTypeError, "number", "times", 4, times)
 	Check(times ~= 0, ThrowRowMulByZeroError)
 	
@@ -447,7 +469,11 @@ end
 matrix_index.row_switch = function(self: Matrix, at: number, with: number): nil
 	local size = self.size
 	
+	Check(isPossibleMatrix(self), ThrowTypeError, "Matrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	Check(isNumber(at), ThrowTypeError, "number", "at", 2, at)
 	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(isNumber(with), ThrowTypeError, "number", "with", 3, with)
 	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
 	
 	local entries = self.entries
@@ -649,7 +675,7 @@ end
 
 --[[
 	Method: Sets the size of `self` to have `m` rows and `n` columns.
-	Default `fill` is set to 0. No secondary `fill` parameter behavior option.
+	Default `fill` parameter is set to 0. No secondary `fill` parameter behavior option.
 ]]
 matrix_index.set_size = function(self: Matrix, m: number, n: number, fill: number?): nil
 	fill = if isNumber(fill::number) then fill else 0
@@ -819,7 +845,11 @@ end
 static_index.row_add = function(self: StaticMatrix, at: number, with: number): nil
 	local size = self.size
 	
+	Check(isPossibleStaticMatrix(self), ThrowTypeError, "StaticMatrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	Check(isNumber(at), ThrowTypeError, "number", "at", 2, at)
 	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(isNumber(with), ThrowTypeError, "number", "with", 3, with)
 	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
 	
 	local n = size[2]
@@ -842,7 +872,11 @@ end
 static_index.row_sub = function(self: StaticMatrix, at: number, with: number): nil
 	local size = self.size
 	
+	Check(isPossibleStaticMatrix(self), ThrowTypeError, "StaticMatrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	Check(isNumber(at), ThrowTypeError, "number", "at", 2, at)
 	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(isNumber(with), ThrowTypeError, "number", "with", 3, with)
 	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
 	
 	local n = size[2]
@@ -862,8 +896,11 @@ end
 static_index.row_mul = function(self: StaticMatrix, at: number, with: number): nil
 	local size = self.size
 	
+	Check(isPossibleStaticMatrix(self), ThrowTypeError, "StaticMatrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	Check(isNumber(at), ThrowTypeError, "number", "at", 2, at)
 	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
-	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
+	Check(isNumber(with), ThrowTypeError, "number", "with", 3, with)
 	Check(with ~= 0, ThrowRowMulByZeroError)
 	
 	local n = size[2]
@@ -888,7 +925,11 @@ end
 static_index.row_fma = function(self: StaticMatrix, at: number, with: number, times: number): nil
 	local size = self.size
 	
+	Check(isPossibleStaticMatrix(self), ThrowTypeError, "StaticMatrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	Check(isNumber(at), ThrowTypeError, "number", "at", 2, at)
 	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(isNumber(with), ThrowTypeError, "number", "with", 3, with)
 	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
 	Check(isNumber(times), ThrowTypeError, "number", "times", 4, times)
 	Check(times ~= 0, ThrowRowMulByZeroError)
@@ -910,7 +951,11 @@ end
 static_index.row_switch = function(self: StaticMatrix, at: number, with: number): nil
 	local size = self.size
 	
+	Check(isPossibleStaticMatrix(self), ThrowTypeError, "StaticMatrix", "self", 1, self)
+	Check(isPossibleSquareMatrix(self), ThrowTypeError, "SquareMatrix", "self", 1, self)
+	Check(isNumber(at), ThrowTypeError, "number", "at", 2, at)
 	Check(InBoundary(at, 1, size[1]), ThrowOutOfBoundError, "at", 2, at)
+	Check(isNumber(with), ThrowTypeError, "number", "with", 3, with)
 	Check(InBoundary(with, 1, size[1]), ThrowOutOfBoundError, "with", 3, with)
 	
 	local n = size[2]
@@ -1232,7 +1277,8 @@ tensor_meta.__metatable = "Tensor"
 local module: Module = {
 	--[[
 		Constructor: Creates a new `Matrix` object.
-		Provides basic arithmetic operations, row operations, and resize operations.
+		This object can perform basic operations, resize operations.
+		If in the form of a square matrix, also includes row operations and other related operations.
 		Requires more memory space for time efficiency to perform resizing.
 	]]
 	newMatrix = function(fill: Matrix_FillParameter, m: number, n: number): Matrix
@@ -1265,11 +1311,10 @@ local module: Module = {
 		return self
 	end,
 	
-	-- Constructor: Creates a new `StaticMatrix` object.
-	
 	--[[
 		Constructor: Creates a new `StaticMatrix` object.
-		Provides basic arithmetic operations and row operations.
+		This object can perform basic operations.
+		If in the form of a square matrix, also includes row operations and other related operations
 		Requires less memory space for no resizing.
 	]]
 	newStaticMatrix = function(fill: StaticMatrix_FillParameter, m: number, n: number): StaticMatrix
@@ -1359,9 +1404,7 @@ local module: Module = {
 		end
 	end,
 	
-	--[[
-		Constructor: Creates a `Matrix` object in the form of an n-by-n identity matrix.
-	]]
+	-- Constructor: Creates a `Matrix` object in the form of an n-by-n identity matrix.
 	identityMatrix = function(n: number): Matrix
 		local entries = table.create(n, nil::any)
 		
@@ -1376,9 +1419,7 @@ local module: Module = {
 		}, matrix_meta)
 	end,
 	
-	--[[
-		Constructor: Creates a `StaticMatrix` object in the form of an n-by-n identity matrix.
-	]]
+	-- Constructor: Creates a `StaticMatrix` object in the form of an n-by-n identity matrix.
 	identityStaticMatrix = function(n: number): StaticMatrix
 		local entries = table.create(n * n, 0)
 		
