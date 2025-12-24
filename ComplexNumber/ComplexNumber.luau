@@ -1,52 +1,133 @@
 --!strict
+--!optimize 2
+--!native
 
--- Version: 1.1.2
+-- TODO: [VERSION 1.2.0] Add support for `nan` and `inf`.
 
-local tostring_signs = {"-", "+", "+"}
-
-local module = {}
+-- Version: 1.1.3
 
 
 -- ** TYPE DEFINITIONS ** --
 
-export type RawComplexNumber = {
-	["real"]: number,
-	["complex"]: number
+type AnyNumber = ComplexNumber | RawComplexNumber | number
+type ComplexOnly = ComplexNumber | number
+type RawComplexOnly = RawComplexNumber | number
+type ObjectOnly = ComplexNumber | RawComplexNumber
+
+type raw_tostring_representation = "general" | "rectangular" | "polar" | "euler"
+type index_table = ComplexNumber_Method & ComplexNumber_RawMethod
+
+type ObjectTypes = "ComplexNumber" | "RawComplexNumber" | "ObjectOnly" | "number"
+
+type ComplexNumber_Method = {
+	clone: (self: ComplexNumber) -> ComplexNumber,
+	magnitude: (self: ComplexNumber) -> number,
+	argument: (self: ComplexNumber) -> number,
+	conjugate: (self: ComplexNumber) -> ComplexNumber,
+	polar: (self: ComplexNumber) -> (number, number),
+}
+type ComplexNumber_RawMethod = {
+	raw_unm: (self: ObjectOnly) -> boolean,
+	raw_add: (self: ObjectOnly, ...AnyNumber) -> boolean,
+	raw_sub: (self: ObjectOnly, ...AnyNumber) -> boolean,
+	raw_mul: (self: ObjectOnly, ...AnyNumber) -> boolean,
+	raw_div: (self: ObjectOnly, ...AnyNumber) -> boolean,
+	raw_idiv: (self: ObjectOnly, ...AnyNumber) -> boolean,
+	raw_mod: () -> nil,
+	raw_pow: (self: ObjectOnly, ...AnyNumber) -> boolean,
+	
+	raw_eq: (self: ObjectOnly, ...ObjectOnly) -> boolean,
+	raw_lt: (self: ObjectOnly, ...ObjectOnly) -> boolean,
+	raw_le: (self: ObjectOnly, ...ObjectOnly) -> boolean,
+	raw_gt: (self: ObjectOnly, ...ObjectOnly) -> boolean,
+	raw_ge: (self: ObjectOnly, ...ObjectOnly) -> boolean,
+	
+	raw_clone: (self: ObjectOnly) -> RawComplexNumber,
+	raw_magnitude: (self: ObjectOnly) -> number,
+	raw_argument: (self: ObjectOnly) -> number,
+	raw_conjugate: (self: ObjectOnly) -> boolean,
+	
+	raw_tostring: (self: ObjectOnly, representation: raw_tostring_representation) -> string,
+}
+type ComplexNumber_Meta = {
+	__index: index_table,
+	__newindex: () -> nil,
+	__metatable: "ComplexNumber",
+	
+	__unm: (self: ComplexNumber) -> ComplexNumber,
+	__add: (a: AnyNumber, b: AnyNumber) -> ComplexNumber,
+	__sub: (a: AnyNumber, b: AnyNumber) -> ComplexNumber,
+	__mul: (a: AnyNumber, b: AnyNumber) -> ComplexNumber,
+	__div: (a: AnyNumber, b: AnyNumber) -> ComplexNumber,
+	__idiv: (a: AnyNumber, b: AnyNumber) -> ComplexNumber,
+	__mod: () -> nil,
+	__pow: (a: AnyNumber, b: AnyNumber) -> ComplexNumber,
+	
+	__eq: (a: ComplexNumber, b: ComplexNumber) -> boolean,
+	__lt: (a: ComplexNumber, b: ComplexNumber) -> boolean,
+	__le: (a: ComplexNumber, b: ComplexNumber) -> boolean,
+	
+	__len: (self: ComplexNumber) -> number,
+	__tostring: (self: ComplexNumber) -> string
 }
 
-export type ComplexNumber = setmetatable<{
-	["real"]: number,
-	["complex"]: number
-}, typeof(module)>
+export type RawComplexNumber = {
+	real: number,
+	complex: number
+}
+export type ComplexNumber = setmetatable<RawComplexNumber, ComplexNumber_Meta>
 
-type AnyNumber = ComplexNumber | RawComplexNumber | number
---type ComplexOnly = ComplexNumber | number
---type RawComplexOnly = RawComplexNumber | number
-type ObjectOnly = ComplexNumber | RawComplexNumber
+export type Module = {
+	newRaw: (real: number, complex: number) -> RawComplexNumber,
+	new: (real: number, complex: number) -> ComplexNumber,
+	
+	real_unit: () -> ComplexNumber,
+	complex_unit: () -> ComplexNumber,
+	
+	fromRaw: (raw: RawComplexNumber) -> ComplexNumber,
+	fromPolar: (magnitude: number, argument: number) -> ComplexNumber,
+	
+	cis: (theta: number) -> ComplexNumber
+}
+
+
+-- ** INTERNAL VARIABLES ** --
+
+local index_table: index_table = {} :: index_table
+local tostring_signs = {"-", "+", "+"}
+
+local module: Module = {} :: Module
+local metamethods: ComplexNumber_Meta = {} :: ComplexNumber_Meta
 
 
 -- ** INTERNAL FUNCTIONS ** --
 
 -- This is a modified version of the function in TypeCheck. Checks whether a number is valid to use with this module.
 local function isNumber(candidate: number): (boolean, "" | "number")
-	if typeof(candidate) ~= "number" then
-		return false, ""
-	end
-	
-	if candidate ~= candidate or math.abs(candidate) == math.huge then
+	if type(candidate) ~= "number" or not math.isfinite(candidate) then
 		return false, ""
 	end
 	
 	return true, "number"
 end
 
--- This check function accepts `ComplexNumber` objects as well, meaning this checks for `ObjectOnly` type.
-local function isRawComplexNumber(candidate: RawComplexNumber): (boolean, "" | "RawComplexNumber")
-	if typeof(candidate) ~= "table" then
+-- This check function accepts both `ComplexNumber` and `RawComplexNumber` objects.
+local function isModuleObject(candidate: ObjectOnly): (boolean, "" | "ObjectOnly")
+	if type(candidate) ~= "table"
+	or not isNumber(candidate.real)
+	or not isNumber(candidate.complex) then
 		return false, ""
 	end
 	
-	if not isNumber(candidate.real) or not isNumber(candidate.complex) then
+	return true, "ObjectOnly"
+end
+
+-- This check function only accepts `RawComplexNumber` objects.
+local function _isRawComplexNumber(candidate: RawComplexNumber): (boolean, "" | "RawComplexNumber")
+	if type(candidate) ~= "table"
+	or getmetatable(candidate) ~= nil
+	or not isNumber(candidate.real)
+	or not isNumber(candidate.complex) then
 		return false, ""
 	end
 	
@@ -55,15 +136,10 @@ end
 
 -- This check function only accepts `ComplexNumber` objects, so `RawComplexNumber` objects are not allowed.
 local function isComplexNumber(candidate: ComplexNumber): (boolean, "" | "ComplexNumber")
-	if typeof(candidate) ~= "table" then
-		return false, ""
-	end
-	
-	if getmetatable(candidate)::string ~= "ComplexNumber" then
-		return false, ""
-	end
-	
-	if not isNumber(candidate.real) or not isNumber(candidate.complex) then
+	if type(candidate) ~= "table"
+	or getmetatable(candidate) ~= "ComplexNumber"
+	or not isNumber(candidate.real)
+	or not isNumber(candidate.complex) then
 		return false, ""
 	end
 	
@@ -107,13 +183,13 @@ local function ThrowUndefinedLimitError(arg_name: string, arg_idx: number): nil
 end
 
 -- Checks the type of candidate using provided check functions from <...>. These functions are the internal check functions. Returned strings are limited by available checks.
-local function AnalyzeType(candidate: AnyNumber, expected_type: string, arg_name: string, arg_idx: number, ...: (...any) -> (boolean, string)): "number" | "RawComplexNumber" | "ComplexNumber"
+local function AnalyzeType(candidate: AnyNumber, expected_type: string, arg_name: string, arg_idx: number, ...: (...any) -> (boolean, string)): "number" | "RawComplexNumber" | "ComplexNumber" | "ObjectOnly"
 	local checks = {...}
 	local typ = ""
 	local flag = false
 	
-	for _, check in checks do
-		flag, typ = check(candidate)
+	for _, check_func in checks do
+		flag, typ = check_func(candidate)
 		
 		if flag then
 			break
@@ -135,24 +211,24 @@ local function Check(expression: boolean, err_func: (...any) -> nil, ...: any): 
 	return nil
 end
 
-local function Complex_Addition(a: AnyNumber, b: AnyNumber, known_type_a: string?): (number, number, string, string)
-	local type_a = if known_type_a then known_type_a else AnalyzeType(a, "AnyNumber", "a", 1, isNumber, isRawComplexNumber)
-	local type_b = AnalyzeType(b, "AnyNumber", "b", 2, isNumber, isRawComplexNumber)
+local function Complex_Addition(a: AnyNumber, b: AnyNumber, known_type_a: ObjectTypes?): (number, number, string, string)
+	local type_a: ObjectTypes = if known_type_a then known_type_a else AnalyzeType(a, "AnyNumber", "a", 1, isNumber, isModuleObject)
+	local type_b: ObjectTypes = AnalyzeType(b, "AnyNumber", "b", 2, isNumber, isModuleObject)
 	
 	local real, complex = 0, 0
-	if type_a == "RawComplexNumber" and type_b == "RawComplexNumber" then
+	if type_a == "ObjectOnly" and type_b == "ObjectOnly" then
 		a = a :: ObjectOnly
 		b = b :: ObjectOnly
 		real = a.real + b.real
 		complex = a.complex + b.complex
 		
-	elseif type_a == "RawComplexNumber" and type_b == "number" then
+	elseif type_a == "ObjectOnly" and type_b == "number" then
 		a = a :: ObjectOnly
 		b = b :: number
 		real = a.real + b
 		complex = a.complex + b
 		
-	elseif type_a == "number" and type_b == "RawComplexNumber" then
+	elseif type_a == "number" and type_b == "ObjectOnly" then
 		a = a :: number
 		b = b :: ObjectOnly
 		real = a + b.real
@@ -162,24 +238,24 @@ local function Complex_Addition(a: AnyNumber, b: AnyNumber, known_type_a: string
 	return real, complex, type_a, type_b
 end
 
-local function Complex_Subtraction(a: AnyNumber, b: AnyNumber, known_type_a: string?): (number, number, string, string)
-	local type_a = if known_type_a then known_type_a else AnalyzeType(a, "AnyNumber", "a", 1, isNumber, isRawComplexNumber)
-	local type_b = AnalyzeType(b, "AnyNumber", "b", 2, isNumber, isRawComplexNumber)
+local function Complex_Subtraction(a: AnyNumber, b: AnyNumber, known_type_a: ObjectTypes?): (number, number, string, string)
+	local type_a: ObjectTypes = if known_type_a then known_type_a else AnalyzeType(a, "AnyNumber", "a", 1, isNumber, isModuleObject)
+	local type_b: ObjectTypes = AnalyzeType(b, "AnyNumber", "b", 2, isNumber, isModuleObject)
 	
 	local real, complex = 0, 0
-	if type_a == "RawComplexNumber" and type_b == "RawComplexNumber" then
+	if type_a == "ObjectOnly" and type_b == "ObjectOnly" then
 		a = a :: ObjectOnly
 		b = b :: ObjectOnly
 		real = a.real - b.real
 		complex = a.complex - b.complex
 		
-	elseif type_a == "RawComplexNumber" and type_b == "number" then
+	elseif type_a == "ObjectOnly" and type_b == "number" then
 		a = a :: ObjectOnly
 		b = b :: number
 		real = a.real - b
 		complex = a.complex - b
 		
-	elseif type_a == "number" and type_b == "RawComplexNumber" then
+	elseif type_a == "number" and type_b == "ObjectOnly" then
 		a = a :: number
 		b = b :: ObjectOnly
 		real = a - b.real
@@ -189,24 +265,24 @@ local function Complex_Subtraction(a: AnyNumber, b: AnyNumber, known_type_a: str
 	return real, complex, type_a, type_b
 end
 
-local function Complex_Multiplication(a: AnyNumber, b: AnyNumber, known_type_a: string?): (number, number, string, string)
-	local type_a = if known_type_a then known_type_a else AnalyzeType(a, "AnyNumber", "a", 1, isNumber, isRawComplexNumber)
-	local type_b = AnalyzeType(b, "AnyNumber", "b", 2, isNumber, isRawComplexNumber)
+local function Complex_Multiplication(a: AnyNumber, b: AnyNumber, known_type_a: ObjectTypes?): (number, number, string, string)
+	local type_a: ObjectTypes = if known_type_a then known_type_a else AnalyzeType(a, "AnyNumber", "a", 1, isNumber, isModuleObject)
+	local type_b: ObjectTypes = AnalyzeType(b, "AnyNumber", "b", 2, isNumber, isModuleObject)
 	
 	local real, complex = 0, 0
-	if type_a == "RawComplexNumber" and type_b == "RawComplexNumber" then
+	if type_a == "ObjectOnly" and type_b == "ObjectOnly" then
 		a = a :: ObjectOnly
 		b = b :: ObjectOnly
 		real = a.real * b.real - a.complex * b.complex
 		complex = a.real * b.complex + a.complex * b.real
 		
-	elseif type_a == "RawComplexNumber" and type_b == "number" then
+	elseif type_a == "ObjectOnly" and type_b == "number" then
 		a = a :: ObjectOnly
 		b = b :: number
 		real = a.real - b
 		complex = a.complex - b
 		
-	elseif type_a == "number" and type_b == "RawComplexNumber" then
+	elseif type_a == "number" and type_b == "ObjectOnly" then
 		a = a :: number
 		b = b :: ObjectOnly
 		real = a - b.real
@@ -216,12 +292,12 @@ local function Complex_Multiplication(a: AnyNumber, b: AnyNumber, known_type_a: 
 	return real, complex, type_a, type_b
 end
 
-local function Complex_Division(a: AnyNumber, b: AnyNumber, known_type_a: string?, idx_b: number): (number, number, string, string)
-	local type_a = if known_type_a then known_type_a else AnalyzeType(a, "AnyNumber", "a", 1, isNumber, isRawComplexNumber)
-	local type_b = AnalyzeType(b, "AnyNumber", "b", 2, isNumber, isRawComplexNumber)
+local function Complex_Division(a: AnyNumber, b: AnyNumber, known_type_a: ObjectTypes?, idx_b: number): (number, number, string, string)
+	local type_a: ObjectTypes = if known_type_a then known_type_a else AnalyzeType(a, "AnyNumber", "a", 1, isNumber, isModuleObject)
+	local type_b: ObjectTypes = AnalyzeType(b, "AnyNumber", "b", 2, isNumber, isModuleObject)
 	
 	local real, complex = 0, 0
-	if type_a == "RawComplexNumber" and type_b == "RawComplexNumber" then
+	if type_a == "ObjectOnly" and type_b == "ObjectOnly" then
 		a = a :: ObjectOnly
 		b = b :: ObjectOnly
 		
@@ -234,7 +310,7 @@ local function Complex_Division(a: AnyNumber, b: AnyNumber, known_type_a: string
 		real = real_numerator / denominator
 		complex = complex_numerator / denominator
 		
-	elseif type_a == "RawComplexNumber" and type_b == "number" then
+	elseif type_a == "ObjectOnly" and type_b == "number" then
 		a = a :: ObjectOnly
 		b = b :: number
 		
@@ -247,7 +323,7 @@ local function Complex_Division(a: AnyNumber, b: AnyNumber, known_type_a: string
 		real = real_numerator / denominator
 		complex = complex_numerator / denominator
 		
-	elseif type_a == "number" and type_b == "RawComplexNumber" then
+	elseif type_a == "number" and type_b == "ObjectOnly" then
 		a = a :: number
 		b = b :: ObjectOnly
 		
@@ -264,13 +340,13 @@ local function Complex_Division(a: AnyNumber, b: AnyNumber, known_type_a: string
 	return real, complex, type_a, type_b
 end
 
-local function Complex_Exponentiation(a: AnyNumber, b: AnyNumber, known_type_a: string?, idx_b: number): (number, number, string, string)
-	local type_a = if known_type_a then known_type_a::("number" | "RawComplexNumber" | "ComplexNumber") else AnalyzeType(a, "AnyNumber", "a", 1, isNumber, isRawComplexNumber)
-	local type_b = AnalyzeType(b, "AnyNumber", "b", 2, isNumber, isRawComplexNumber)
+local function Complex_Exponentiation(a: AnyNumber, b: AnyNumber, known_type_a: ObjectTypes?, idx_b: number): (number, number, string, string)
+	local type_a: ObjectTypes = if known_type_a then known_type_a::("number" | "RawComplexNumber" | "ComplexNumber") else AnalyzeType(a, "AnyNumber", "a", 1, isNumber, isModuleObject)
+	local type_b: ObjectTypes = AnalyzeType(b, "AnyNumber", "b", 2, isNumber, isModuleObject)
 	
 	local real, complex = 0, 0
 	
-	if type_a == "RawComplexNumber" and type_b == "RawComplexNumber" then
+	if type_a == "ObjectOnly" and type_b == "ObjectOnly" then
 		a = a :: ObjectOnly
 		b = b :: ObjectOnly
 		
@@ -313,7 +389,7 @@ local function Complex_Exponentiation(a: AnyNumber, b: AnyNumber, known_type_a: 
 			complex = term_12 * term_3_complex
 		end
 		
-	elseif type_a == "RawComplexNumber" and type_b == "number" then
+	elseif type_a == "ObjectOnly" and type_b == "number" then
 		a = a :: ObjectOnly
 		b = b :: number
 		
@@ -351,7 +427,7 @@ local function Complex_Exponentiation(a: AnyNumber, b: AnyNumber, known_type_a: 
 			complex = term_1 * term_3_complex
 		end
 		
-	elseif type_a == "number" and type_b == "RawComplexNumber" then
+	elseif type_a == "number" and type_b == "ObjectOnly" then
 		a = a :: number
 		b = b :: ObjectOnly
 		
@@ -396,7 +472,7 @@ local function Complex_Exponentiation(a: AnyNumber, b: AnyNumber, known_type_a: 
 end
 
 local function Complex_Magnitude_Compare(a: AnyNumber, idx_a: number): number
-	local type_a = AnalyzeType(a, "AnyNumber", "a", idx_a, isNumber, isRawComplexNumber)
+	local type_a = AnalyzeType(a, "AnyNumber", "a", idx_a, isNumber, isModuleObject)
 	
 	if type_a == "number" then
 		a = a :: number
@@ -415,8 +491,8 @@ module.newRaw = function(real: number, complex: number): RawComplexNumber
 	AnalyzeType(real, "number", "real", 1, isNumber)
 	AnalyzeType(complex, "number", "complex", 2, isNumber)
 	return {
-		["real"] = real,
-		["complex"] = complex
+		real = real,
+		complex = complex
 	}
 end
 
@@ -425,105 +501,105 @@ module.new = function(real: number, complex: number): ComplexNumber
 	AnalyzeType(real, "number", "real", 1, isNumber)
 	AnalyzeType(complex, "number", "complex", 2, isNumber)
 	return setmetatable({
-		["real"] = real,
-		["complex"] = complex
-	}, module)
+		real = real,
+		complex = complex
+	}, metamethods)
 end
 
 --[[
-Constructor: Creates a new `ComplexNumber` object that is equivalent to (1 + 0𝒊).
-Essentially creates a unit on the real component.
+	Constructor: Creates a new `ComplexNumber` object that is equivalent to (1 + 0i).
+	Essentially creates a unit on the real component.
 ]]
 module.real_unit = function(): ComplexNumber
 	return setmetatable({
-		["real"] = 1,
-		["complex"] = 0
-	}, module)
+		real = 1,
+		complex = 0
+	}, metamethods)
 end
 
 --[[
-Constructor: Creates a new `ComplexNumber` object that is equivalent to (0 + 1𝒊).
-Essentially creates the imaginary unit.
+	Constructor: Creates a new `ComplexNumber` object that is equivalent to (0 + 1i).
+	Essentially creates the imaginary unit.
 ]]
 module.complex_unit = function(): ComplexNumber
 	return setmetatable({
-		["real"] = 0,
-		["complex"] = 1
-	}, module)
+		real = 0,
+		complex = 1
+	}, metamethods)
 end
 
 -- Constructor: Creates a new `ComplexNumber` object from a valid `RawComplexNumber` type.
 module.fromRaw = function(raw: RawComplexNumber): ComplexNumber
-	AnalyzeType(raw, "RawComplexNumber", "raw", 1, isRawComplexNumber)
+	AnalyzeType(raw, "RawComplexNumber", "raw", 1, isModuleObject)
 	return setmetatable({
-		["real"] = raw.real,
-		["complex"] = raw.complex
-	}, module)
+		real = raw.real,
+		complex = raw.complex
+	}, metamethods)
 end
 
 --[[
-Constructor: Creates a new `ComplexNumber` object from `magnitude`, and `argument` (angle in radians).
-After creation, the `ComplexNumber` object will be in the general form.
+	Constructor: Creates a new `ComplexNumber` object from `magnitude`, and `argument` (angle in radians).
+	After creation, the `ComplexNumber` object will be in the general form.
 ]]
 module.fromPolar = function(magnitude: number, argument: number): ComplexNumber
 	AnalyzeType(magnitude, "number", "magnitude", 1, isNumber)
 	AnalyzeType(argument, "number", "argument", 2, isNumber)
 	return setmetatable({
-		["real"] = magnitude * math.cos(argument),
-		["complex"] = magnitude * math.sin(argument)
-	}, module)
+		real = magnitude * math.cos(argument),
+		complex = magnitude * math.sin(argument)
+	}, metamethods)
 end
 
 
 -- ** FUNCTIONS ** --
 
 --[[
-Function: Computes the trigonometric function `cis(theta)` with angle <theta> (in radians).
-Equivalent to computing 'cos(theta) + 𝒊 sin(theta)', or Euler's formula.
+	Function: Computes the trigonometric function `cis(theta)` with angle <theta> (in radians).
+	Equivalent to computing 'cos(theta) + i sin(theta)', or Euler's formula.
 ]]
 module.cis = function(theta: number): ComplexNumber
 	AnalyzeType(theta, "number", "theta", 1, isNumber)
 	return setmetatable({
-		["real"] = math.cos(theta),
-		["complex"] = math.sin(theta)
-	}, module)
+		real = math.cos(theta),
+		complex = math.sin(theta)
+	}, metamethods)
 end
 
 
 -- ** METHODS ** --
 
 -- Method: Creates a new `ComplexNumber` object, whose real, and imaginary parts are taken from `self`.
-module.clone = function(self: ComplexNumber): ComplexNumber
+index_table.clone = function(self: ComplexNumber): ComplexNumber
 	AnalyzeType(self, "ComplexNumber", "self", 1, isComplexNumber)
 	return setmetatable({
-		["real"] = self.real,
-		["complex"] = self.complex
-	}, module)
+		real = self.real,
+		complex = self.complex
+	}, metamethods)
 end
 
 --[[
-Method: Computes the magnitude (modulus/absolute value) of `self`.
-Similarly, using `#` operator on a `ComplexNumber` object returns this result.
+	Method: Computes the magnitude (modulus/absolute value) of `self`.
+	Similarly, using `#` operator on a `ComplexNumber` object returns this result.
 ]]
-module.magnitude = function(self: ComplexNumber): number
+index_table.magnitude = function(self: ComplexNumber): number
 	AnalyzeType(self, "ComplexNumber", "self", 1, isComplexNumber)
 	return math.sqrt(self.real ^ 2 + self.complex ^ 2)
 end
 
 -- Method: Computes the complex argument (counter-clockwise angle from the positive real axis) of `self`.
-module.argument = function(self: ComplexNumber): number
+index_table.argument = function(self: ComplexNumber): number
 	AnalyzeType(self, "ComplexNumber", "self", 1, isComplexNumber)
 	return math.atan2(self.complex, self.real)
 end
 
 -- Method: Creates a new `ComplexNumber` object that is the complex conjugate of `self`.
-module.conjugate = function(self: ComplexNumber): ComplexNumber
+index_table.conjugate = function(self: ComplexNumber): ComplexNumber
 	AnalyzeType(self, "ComplexNumber", "self", 1, isComplexNumber)
 	return module.new(self.real, -self.complex)
 end
 
 -- Method: Returns both the magnitude, and the complex argument of `self`.
-module.polar = function(self: ComplexNumber): (number, number)
+index_table.polar = function(self: ComplexNumber): (number, number)
 	AnalyzeType(self, "ComplexNumber", "self", 1, isComplexNumber)
 	return math.sqrt(self.real ^ 2 + self.complex ^ 2),
 		math.atan2(self.complex, self.real)
@@ -534,8 +610,8 @@ end
 -- ** RAW METHODS - BASIC ARITHMETIC OPERATION ** --
 
 -- RawMethod: Modify the components of `self` into its additive inverse.
-module.raw_unm = function(self: ObjectOnly): boolean
-	AnalyzeType(self, "ObjectOnly", "self", 1, isRawComplexNumber)
+index_table.raw_unm = function(self: ObjectOnly): boolean
+	AnalyzeType(self, "ObjectOnly", "self", 1, isModuleObject)
 	self = self :: ObjectOnly
 	self.real = -self.real
 	self.complex = -self.complex
@@ -543,8 +619,8 @@ module.raw_unm = function(self: ObjectOnly): boolean
 end
 
 -- RawMethod: Modify the components of `self` by performing complex addition to it for each operand.
-module.raw_add = function(self: ObjectOnly, ...: AnyNumber): boolean
-	local type_a = AnalyzeType(self, "ObjectOnly", "self", 1, isRawComplexNumber)
+index_table.raw_add = function(self: ObjectOnly, ...: AnyNumber): boolean
+	local type_a = AnalyzeType(self, "ObjectOnly", "self", 1, isModuleObject)
 	
 	for _, complex_num in ipairs({...}) do
 		local real, complex = Complex_Addition(self, complex_num, type_a)
@@ -555,8 +631,8 @@ module.raw_add = function(self: ObjectOnly, ...: AnyNumber): boolean
 end
 
 -- RawMethod: Modify the components of `self` by performing complex subtraction to it for each operand.
-module.raw_sub = function(self: ObjectOnly, ...: AnyNumber): boolean
-	local type_a = AnalyzeType(self, "ObjectOnly", "self", 1, isRawComplexNumber)
+index_table.raw_sub = function(self: ObjectOnly, ...: AnyNumber): boolean
+	local type_a = AnalyzeType(self, "ObjectOnly", "self", 1, isModuleObject)
 	
 	for _, complex_num in ipairs({...}) do
 		local real, complex = Complex_Subtraction(self, complex_num, type_a)
@@ -567,8 +643,8 @@ module.raw_sub = function(self: ObjectOnly, ...: AnyNumber): boolean
 end
 
 -- RawMethod: Modify the components of `self` by performing complex multiplication to it for each operand.
-module.raw_mul = function(self: ObjectOnly, ...: AnyNumber): boolean
-	local type_a = AnalyzeType(self, "ObjectOnly", "self", 1, isRawComplexNumber)
+index_table.raw_mul = function(self: ObjectOnly, ...: AnyNumber): boolean
+	local type_a = AnalyzeType(self, "ObjectOnly", "self", 1, isModuleObject)
 	
 	for _, complex_num in ipairs({...}) do
 		local real, complex = Complex_Multiplication(self, complex_num, type_a)
@@ -579,8 +655,8 @@ module.raw_mul = function(self: ObjectOnly, ...: AnyNumber): boolean
 end
 
 -- RawMethod: Modify the components of `self` by performing complex division to it for each operand.
-module.raw_div = function(self: ObjectOnly, ...: AnyNumber): boolean
-	local type_a = AnalyzeType(self, "ObjectOnly", "self", 1, isRawComplexNumber)
+index_table.raw_div = function(self: ObjectOnly, ...: AnyNumber): boolean
+	local type_a = AnalyzeType(self, "ObjectOnly", "self", 1, isModuleObject)
 	
 	for idx, complex_num in ipairs({...}) do
 		local real, complex = Complex_Division(self, complex_num, type_a, idx + 1)
@@ -591,8 +667,8 @@ module.raw_div = function(self: ObjectOnly, ...: AnyNumber): boolean
 end
 
 -- RawMethod: Modify the components of `self` by performing complex int division to it for each operand.
-module.raw_idiv = function(self: ObjectOnly, ...: AnyNumber): boolean
-	local type_a = AnalyzeType(self, "ObjectOnly", "self", 1, isRawComplexNumber)
+index_table.raw_idiv = function(self: ObjectOnly, ...: AnyNumber): boolean
+	local type_a = AnalyzeType(self, "ObjectOnly", "self", 1, isModuleObject)
 	
 	for idx, complex_num in ipairs({...}) do
 		local real, complex = Complex_Division(self, complex_num, type_a, idx + 1)
@@ -603,13 +679,13 @@ module.raw_idiv = function(self: ObjectOnly, ...: AnyNumber): boolean
 end
 
 -- RawMethod: Currently, this raw method does not work. Attempting to call this raw method will throw an error.
-module.raw_mod = function(): nil
+index_table.raw_mod = function(): nil
 	error("This is an invalid operation as of now.")
 end
 
 -- RawMethod: Modify the components of `self` by performing complex exponentiation to it for each operand.
-module.raw_pow = function(self: ObjectOnly, ...: AnyNumber): boolean
-	local type_a = AnalyzeType(self, "ObjectOnly", "self", 1, isRawComplexNumber)
+index_table.raw_pow = function(self: ObjectOnly, ...: AnyNumber): boolean
+	local type_a = AnalyzeType(self, "ObjectOnly", "self", 1, isModuleObject)
 	
 	for idx, complex_num in ipairs({...}) do
 		local real, complex = Complex_Exponentiation(self, complex_num, type_a, idx + 1)
@@ -623,8 +699,8 @@ end
 -- ** RAW METHODS - EQUALITY COMPARISON ** --
 
 -- RawMethod: Returns a boolean determining whether `self` is equivalent to every operands.
-module.raw_eq = function(self: ObjectOnly, ...: ObjectOnly): boolean
-	Check(isRawComplexNumber(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
+index_table.raw_eq = function(self: ObjectOnly, ...: ObjectOnly): boolean
+	Check(isModuleObject(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
 	
 	local self_magnitude = self.real ^ 2 + self.complex ^ 2
 	
@@ -640,8 +716,8 @@ module.raw_eq = function(self: ObjectOnly, ...: ObjectOnly): boolean
 end
 
 -- RawMethod: Returns a boolean determining whether `self` is less than every operands.
-module.raw_lt = function(self: ObjectOnly, ...: ObjectOnly): boolean
-	Check(isRawComplexNumber(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
+index_table.raw_lt = function(self: ObjectOnly, ...: ObjectOnly): boolean
+	Check(isModuleObject(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
 	
 	local self_magnitude = self.real ^ 2 + self.complex ^ 2
 	
@@ -657,8 +733,8 @@ module.raw_lt = function(self: ObjectOnly, ...: ObjectOnly): boolean
 end
 
 -- RawMethod: Returns a boolean determining whether `self` is less than or equal to every operands.
-module.raw_le = function(self: ObjectOnly, ...: ObjectOnly): boolean
-	Check(isRawComplexNumber(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
+index_table.raw_le = function(self: ObjectOnly, ...: ObjectOnly): boolean
+	Check(isModuleObject(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
 	
 	local self_magnitude = self.real ^ 2 + self.complex ^ 2
 	
@@ -674,8 +750,8 @@ module.raw_le = function(self: ObjectOnly, ...: ObjectOnly): boolean
 end
 
 -- RawMethod: Returns a boolean determining whether `self` is greater than every operands.
-module.raw_gt = function(self: ObjectOnly, ...: ObjectOnly): boolean
-	Check(isRawComplexNumber(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
+index_table.raw_gt = function(self: ObjectOnly, ...: ObjectOnly): boolean
+	Check(isModuleObject(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
 	
 	local self_magnitude = self.real ^ 2 + self.complex ^ 2
 	
@@ -692,8 +768,8 @@ module.raw_gt = function(self: ObjectOnly, ...: ObjectOnly): boolean
 end
 
 -- RawMethod: Returns a boolean determining whether `self` is greater than or equal to every operands.
-module.raw_ge = function(self: ObjectOnly, ...: ObjectOnly): boolean
-	Check(isRawComplexNumber(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
+index_table.raw_ge = function(self: ObjectOnly, ...: ObjectOnly): boolean
+	Check(isModuleObject(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
 	
 	local self_magnitude = self.real ^ 2 + self.complex ^ 2
 	
@@ -712,21 +788,29 @@ end
 
 -- ** RAW METHODS - FROM METHOD ** --
 
+index_table.raw_clone = function(self: ObjectOnly): RawComplexNumber
+	Check(isModuleObject(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
+	return {
+		real = self.real,
+		complex = self.complex
+	}
+end
+
 -- RawMethod: Computes the magnitude (modulus/absolute value) of `self`. Accepts valid `RawComplexNumber` types.
-module.raw_magnitude = function(self: ObjectOnly): number
-	Check(isRawComplexNumber(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
+index_table.raw_magnitude = function(self: ObjectOnly): number
+	Check(isModuleObject(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
 	return math.sqrt(self.real ^ 2 + self.complex ^ 2)
 end
 
 -- RawMethod: Computes the complex argument (counter-clockwise angle from the positive real axis) of `self`. Accepts valid `RawComplexNumber` types.
-module.raw_argument = function(self: ObjectOnly): number
-	Check(isRawComplexNumber(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
+index_table.raw_argument = function(self: ObjectOnly): number
+	Check(isModuleObject(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
 	return math.atan2(self.complex, self.real)
 end
 
 -- RawMethod: Modify `self` to its conjugate.
-module.raw_conjugate = function(self: ObjectOnly): boolean
-	Check(isRawComplexNumber(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
+index_table.raw_conjugate = function(self: ObjectOnly): boolean
+	Check(isModuleObject(self), ThrowTypeError, "ObjectOnly", "self", 1, self)
 	self.complex = -self.complex
 	return true
 end
@@ -735,13 +819,13 @@ end
 -- ** RAW METHODS - OTHER ** --
 
 --[[
-RawMethod: Create a <string> representation formatted to display `self`, according to <representation>.
-Optional <representation> can be either "general", "rectangular", "polar". By default, always displays in "general" form.
+	RawMethod: Create a <string> representation formatted to display `self`, according to <representation>.
+	Optional <representation> can be either "general", "rectangular", "polar". By default, always displays in "general" form.
 ]]
-module.raw_tostring = function(self: RawComplexNumber, representation: ("general" | "rectangular" | "polar" | "euler")?): string
-	assert(isRawComplexNumber(self), `Failed to perform \`:raw_tostring()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
+index_table.raw_tostring = function(self: ObjectOnly, representation: ("general" | "rectangular" | "polar" | "euler")?): string
+	assert(isModuleObject(self), `Failed to perform \`:raw_tostring()\` raw method. Expected <RawComplexNumber> type for <self> (arg #1), got <{typeof(self)}>.`)
 	
-	self = self :: RawComplexNumber
+	self = self :: ObjectOnly
 	representation = representation :: ("general" | "rectangular" | "polar" | "euler")
 	
 	if representation == "rectangular" then
@@ -751,98 +835,98 @@ module.raw_tostring = function(self: RawComplexNumber, representation: ("general
 		local magnitude = math.sqrt(self.real ^ 2 + self.complex ^ 2)
 		local argument = math.atan2(self.complex, self.real)
 		
-		return `{magnitude} 𝐜𝐢𝐬 {argument}`
+		return `{magnitude} cis {argument}`
 		
 	elseif representation == "euler" then
 		local magnitude = math.sqrt(self.real ^ 2 + self.complex ^ 2)
 		local argument = math.atan2(self.complex, self.real)
 		
-		return `{magnitude} 𝒆^({argument}𝒊)`
+		return `{magnitude} e^({argument}i)`
 	end
 	
 	local complex_sign = tostring_signs[math.sign(self.complex) + 2]
 	local complex_number = math.abs(self.complex)
 	
-	return `({self.real} {complex_sign} {complex_number}𝒊)`
+	return `({self.real} {complex_sign} {complex_number}i)`
 end
 
 
 -- ** METAMETHODS ** --
 -- ** METAMETHODS - INITIAL ** --
 
-module.__index = module
+metamethods.__index = index_table
 
-module.__newindex = function(t: ComplexNumber, key: any, value: any): nil
+metamethods.__newindex = function(t: ComplexNumber, key: any, value: any): nil
 	error(`Attempted to create a new index/key in <ComplexNumber> object.\nObject representation: {t}\nIndex/Key: {key}\nValue: {value}`)
 end
 
-module.__metatable = "ComplexNumber"
+metamethods.__metatable = "ComplexNumber"
 
 
 -- ** METAMETHODS - BASIC ARITHMETIC OPERATION ** --
 
-module.__unm = function(self: ComplexNumber): ComplexNumber
+metamethods.__unm = function(self: ComplexNumber): ComplexNumber
 	Check(isComplexNumber(self), ThrowTypeError, "ComplexNumber", "self", 1, self)
 	self.real, self.complex = -self.real, -self.complex
 	return self
 end
 
-module.__add = function(a: AnyNumber, b: AnyNumber): ComplexNumber
+metamethods.__add = function(a: AnyNumber, b: AnyNumber): ComplexNumber
 	local real, complex = Complex_Addition(a, b)
 	return setmetatable({
-		["real"] = real,
-		["complex"] = complex
-	}, module)
+		real = real,
+		complex = complex
+	}, metamethods)
 end
 
-module.__sub = function(a: AnyNumber, b: AnyNumber): ComplexNumber
+metamethods.__sub = function(a: AnyNumber, b: AnyNumber): ComplexNumber
 	local real, complex = Complex_Subtraction(a, b)
 	return setmetatable({
-		["real"] = real,
-		["complex"] = complex
-	}, module)
+		real = real,
+		complex = complex
+	}, metamethods)
 end
 
-module.__mul = function(a: AnyNumber, b: AnyNumber): ComplexNumber
+metamethods.__mul = function(a: AnyNumber, b: AnyNumber): ComplexNumber
 	local real, complex = Complex_Multiplication(a, b)
 	return setmetatable({
-		["real"] = real,
-		["complex"] = complex
-	}, module)
+		real = real,
+		complex = complex
+	}, metamethods)
 end
 
-module.__div = function(a: AnyNumber, b: AnyNumber): ComplexNumber
+metamethods.__div = function(a: AnyNumber, b: AnyNumber): ComplexNumber
 	local real, complex = Complex_Division(a, b, nil, 2)
 	return setmetatable({
-		["real"] = real,
-		["complex"] = complex
-	}, module)
+		real = real,
+		complex = complex
+	}, metamethods)
 end
 
-module.__idiv = function(a: AnyNumber, b: AnyNumber): ComplexNumber
+metamethods.__idiv = function(a: AnyNumber, b: AnyNumber): ComplexNumber
 	local real, complex = Complex_Division(a, b, nil, 2)
 	return setmetatable({
-		["real"] = math.floor(real),
-		["complex"] = math.floor(complex)
-	}, module)
+		real = math.floor(real),
+		complex = math.floor(complex)
+	}, metamethods)
 end
 
-module.__mod = function(): nil
+metamethods.__mod = function(): nil
 	error("This is an invalid operation as of now.")
 end
 
-module.__pow = function(a: AnyNumber, b: AnyNumber): ComplexNumber
+metamethods.__pow = function(a: AnyNumber, b: AnyNumber): ComplexNumber
 	local real, complex = Complex_Exponentiation(a, b, nil, 2)
 	return setmetatable({
-		["real"] = math.floor(real),
-		["complex"] = math.floor(complex)
-	}, module)
+		real = math.floor(real),
+		complex = math.floor(complex)
+	}, metamethods)
 end
 
 
 -- ** METAMETHODS - EQUALITY COMPARISON ** --
 
-module.__eq = function(a: ComplexNumber, b: ComplexNumber): boolean
+metamethods.__eq = function(a: ComplexNumber, b: ComplexNumber): boolean
 	Check(isComplexNumber(a), ThrowTypeError, "ComplexNumber", "a", 1, a)
 	Check(isComplexNumber(b), ThrowTypeError, "ComplexNumber", "b", 2, b)
 	
@@ -851,7 +935,7 @@ module.__eq = function(a: ComplexNumber, b: ComplexNumber): boolean
 	return magnitude_A == magnitude_B
 end
 
-module.__lt = function(a: ComplexNumber, b: ComplexNumber): boolean
+metamethods.__lt = function(a: ComplexNumber, b: ComplexNumber): boolean
 	Check(isComplexNumber(a), ThrowTypeError, "ComplexNumber", "a", 1, a)
 	Check(isComplexNumber(b), ThrowTypeError, "ComplexNumber", "b", 2, b)
 	
@@ -860,7 +944,7 @@ module.__lt = function(a: ComplexNumber, b: ComplexNumber): boolean
 	return magnitude_A < magnitude_B
 end
 
-module.__le = function(a: ComplexNumber, b: ComplexNumber): boolean
+metamethods.__le = function(a: ComplexNumber, b: ComplexNumber): boolean
 	Check(isComplexNumber(a), ThrowTypeError, "ComplexNumber", "a", 1, a)
 	Check(isComplexNumber(b), ThrowTypeError, "ComplexNumber", "b", 2, b)
 	
@@ -872,17 +956,17 @@ end
 
 -- ** METAMETHODS - OTHER ** --
 
-module.__len = function(self: ComplexNumber): number
+metamethods.__len = function(self: ComplexNumber): number
 	Check(isComplexNumber(self), ThrowTypeError, "ComplexNumber", "self", 1, self)
 	return math.sqrt(self.real ^ 2 + self.complex ^ 2)
 end
 
-module.__tostring = function(self: ComplexNumber): string
+metamethods.__tostring = function(self: ComplexNumber): string
 	Check(isComplexNumber(self), ThrowTypeError, "ComplexNumber", "self", 1, self)
 	
 	local complex_sign = tostring_signs[math.sign(self.complex) + 2]
 	local complex_number = math.abs(self.complex)
-	return `({self.real} {complex_sign} {complex_number}𝒊)`
+	return `({self.real} {complex_sign} {complex_number}i)`
 end
 
 return module

@@ -2,27 +2,23 @@
 --!optimize 2
 --!native
 
--- TODO: [VERSION 1.3.0] Implement internal storage for Timer properties. In case of any malicious/false modifications from the user. Change source code to use them instead of the ones that is public.
--- TODO: [VERSION 1.3.0] Implement Timer object reset function.
+-- TODO: [VERSION 1.0.0] Implement user-defined task. This is run every frame (via RunService.Heartbeat.)
+-- TODO: [VERSION 1.0.0] Implement user-defined timestamps. These are run whenever the specified time had elapsed.
+-- TODO: [VERSION 1.0.0] Add user-defined function descriptions.
+
+-- TODO: [VERSION 1.1.0] Implement internal storage for Timer properties. In case of any malicious/false modifications from the user. Change source code to use them instead of the ones that is public.
+-- TODO: [VERSION 1.1.0] Implement Timer object reset function.
+-- TODO: [VERSION 1.1.0] Implement server-protected and client-protected Timer. Splitting `protected` property into 2. Server-protected will act similarly to current `protected`. Client-protected will prevent client-sided destruction of Timer.
+-- TODO: [VERSION 1.1.0] Implement object pooling for RemoteEvents.
 
 
--- Version: 1.2.0
-
-
--- INTERNAL VARIABLE --
-
-local storage: TimerStorage = {}
-local protected_storage: TimerStorage = {}
-
-local index_table: Timer_Method = {} :: Timer_Method
-local timer_meta: Timer_Meta = {} :: Timer_Meta
-
-local module: Module = {} :: Module
+-- Version: 1.0.0
 
 
 -- TYPE DEFINITION --
 
 type Timer_Identifier = string | number
+type Timer_Action = (...any) -> nil
 
 type Timer_Method = {
 	Start: (self: Timer) -> nil,
@@ -30,21 +26,26 @@ type Timer_Method = {
 	Pause: (self: Timer) -> nil,
 	Stop: (self: Timer) -> nil,
 	
+	MarkTimestamp: (self: Timer, timestamp: number, action: Timer_Action) -> nil,
+	UnmarkTimestamp: (self: Timer, timestamp: number) -> nil,
+	
 	GetCurrentTime: (self: Timer) -> number,
 	SetDuration: (self: Timer, seconds: number) -> nil,
+	ResetTimer: (self: Timer) -> nil,
 	
 	IsActive: (self: Timer) -> boolean,
 	IsInactive: (self: Timer) -> boolean,
-	IsPaused: (self: Timer) -> boolean
+	IsPaused: (self: Timer) -> boolean,
 }
 type Timer_Meta = {
 	__index: Timer_Method,
-	__newindex: () -> nil,
-	__metatable: "Timer",
-	__tostring: (self: Timer) -> string
+	__newindex: (self: Timer, key: any, value: any) -> nil,
+	__metatable: "TimerRBX",
+	__tostring: (timer: Timer) -> string
 }
 export type Timer = setmetatable<{
 	duration: number,
+	timestamps: {[number]: {Timer_Action}},
 	
 	startTime: number,
 	stopTime: number,
@@ -52,8 +53,16 @@ export type Timer = setmetatable<{
 	
 	isActive: boolean,
 	
+	Started: BindableEvent,
+	Resumed: BindableEvent,
+	Paused: BindableEvent,
+	Stopped: BindableEvent,
+	Ended: BindableEvent,
+	
+	Changed: BindableEvent,
+	
 	id: Timer_Identifier,
-	protected: boolean
+	protected: boolean,
 }, Timer_Meta>
 
 type TimerStorage = {[Timer_Identifier]: Timer}
@@ -61,8 +70,8 @@ type TimerStorage = {[Timer_Identifier]: Timer}
 type Module = {
 	new: (id: Timer_Identifier, duration: number, protected: boolean?) -> Timer,
 	destroy: (id: Timer_Identifier) -> nil,
-	hasTimer: (id: Timer_Identifier) -> boolean,
-	isTimer: (candidate: Timer) -> boolean
+	isTimer: (candidate: Timer) -> boolean,
+	hasTimer: (id: Timer_Identifier) -> boolean
 }
 
 
@@ -73,14 +82,13 @@ local function isString(candidate: string): boolean
 end
 
 local function isNumber(candidate: number): boolean
-	return type(candidate) == "number" and math.isfinite(candidate)
+	return type(candidate) == "number" and candidate == candidate and candidate ~= math.huge and candidate ~= -math.huge
 end
 
 local function isTimerId(candidate: Timer_Identifier): boolean
 	return isString(candidate::string) or isNumber(candidate::number)
 end
 
--- This is a wrapper function for type error handling.
 local function ThrowTypeError(expected_type: string, arg_name: string, arg_idx: number, arg_val: any): nil
 	error(`\
 		--------------------\
@@ -136,12 +144,18 @@ local function ThrowTimerOperationError(): nil
 	)
 end
 
--- Formats `n` into a string with `digits` digits.
+local function ResetTimer(timer: Timer): nil
+	timer.startTime = -1
+	timer.stopTime = -1
+	timer.pauseTime = -1
+	timer.isActive = false
+	return nil
+end
+
 local function FormatDigit(n: number, digits: number): string
 	return (`%0{digits}i`::any):format(tostring(n))
 end
 
--- Checks an expression and throw an error message using <err_func>. This is similar to assert(), except the string is not formatted prior to call.
 local function Check(expression: boolean, err_func: (...any) -> nil, ...: any): nil
 	if expression then
 		err_func(...)
@@ -150,13 +164,20 @@ local function Check(expression: boolean, err_func: (...any) -> nil, ...: any): 
 end
 
 
+-- INTERNAL VARIABLE --
+
+local RunService = game:GetService("RunService")
+
+local storage: TimerStorage = {}
+local protected_storage: TimerStorage = {}
+
+local index_table: Timer_Method = {} :: Timer_Method
+local timer_meta: Timer_Meta = {} :: Timer_Meta
+local module: Module = {} :: Module
+
+
 -- METHOD --
 
---[[
-	Method: Starts the Timer. `self` enters Active state.
-	This method always works. It can be used to soft reset `self`.
-	This is a simulation and does not update per frame.
-]]
 index_table.Start = function(self: Timer): nil
 	local currentTime = os.clock()
 	
@@ -166,14 +187,12 @@ index_table.Start = function(self: Timer): nil
 	self.stopTime = currentTime + self.duration
 	self.pauseTime = -1
 	self.isActive = true
+	
+	self.Started:Fire(currentTime, os.clock())
+	
 	return nil
 end
 
---[[
-	Method: Resumes the Timer. `self` enters Active state.
-	This method only works if the module can detect that `self` is in Paused state.
-	This is a simulation and does not update per frame.
-]]
 index_table.Resume = function(self: Timer): nil
 	local currentTime = os.clock()
 	
@@ -186,14 +205,12 @@ index_table.Resume = function(self: Timer): nil
 	self.stopTime += currentTime - self.pauseTime
 	self.pauseTime = -1
 	self.isActive = true
+	
+	self.Resumed:Fire(currentTime, os.clock())
+	
 	return nil
 end
 
---[[
-	Method: Resumes the Timer. `self` enters Paused state.
-	This method only works if the module can detect that `self` is in Active state.
-	This is a simulation and does not update per frame.
-]]
 index_table.Pause = function(self: Timer): nil
 	local currentTime = os.clock()
 	
@@ -205,14 +222,10 @@ index_table.Pause = function(self: Timer): nil
 	
 	self.pauseTime = currentTime
 	self.isActive = false
+	
 	return nil
 end
 
---[[
-	Method: Resumes the Timer. `self` enters Inactive state.
-	This method always works. It can be used to soft reset `self`.
-	This is a simulation and does not update per frame.
-]]
 index_table.Stop = function(self: Timer): nil
 	Check(module.isTimer(self), ThrowTimerOperationError)
 	
@@ -227,19 +240,12 @@ index_table.Stop = function(self: Timer): nil
 	return nil
 end
 
---[[
-	Method: Calculates the current time.
-	Additionally, updates the TImer state if possible.
-]]
 index_table.GetCurrentTime = function(self: Timer): number
 	local currentTime = os.clock()
 	
 	Check(module.isTimer(self), ThrowTimerOperationError)
 	
 	if currentTime >= self.stopTime then
-		self.startTime = -1
-		self.stopTime = -1
-		self.pauseTime = -1
 		self.isActive = false
 	end
 	
@@ -252,61 +258,46 @@ index_table.GetCurrentTime = function(self: Timer): number
 	return -1
 end
 
---[[
-	Method: Sets the duration for the Timer.
-	This method does not affect `self` if it is in Active state.
-]]
 index_table.SetDuration = function(self: Timer, seconds: number): nil
 	Check(module.isTimer(self), ThrowTimerOperationError)
 	Check(isNumber(seconds), ThrowTypeError, "number", "seconds", 2, seconds)
 	Check(seconds > 0, ThrowDurationError, seconds, 2)
+	
 	self.duration = seconds
 	return nil
 end
 
---[[
-	Method: Returns `true` if `self` is in Active state.
-	Otherwise, returns `false`. This can be used to detect Unknown state.
-	Additionally, updates the TImer state if possible.
-]]
-index_table.IsActive = function(self: Timer): boolean
-	local currentTime = os.clock()
-	Check(module.isTimer(self), ThrowTimerOperationError)
-	
-	if currentTime >= self.stopTime then
-		self.startTime = -1
-		self.stopTime = -1
-		self.pauseTime = -1
-		self.isActive = false
-	end
-	
-	return self.isActive
+index_table.MarkTimestamp = function(self: Timer, timestamp: number, action: Timer_Action): nil
+	return nil
 end
 
---[[
-	Method: Returns `true` if `self` is in Inactive state.
-	Otherwise, returns `false`. This can be used to detect Unknown state.
-	Additionally, updates the TImer state if possible.
-]]
+index_table.UnmarkTimestamp = function(self: Timer, timestamp: number): nil
+	return nil
+end
+
+index_table.IsActive = function(self: Timer): boolean
+	local currentTime = os.clock()
+	
+	Check(module.isTimer(self), ThrowTimerOperationError)
+	
+	return self.isActive and currentTime < self.stopTime
+end
+
 index_table.IsInactive = function(self: Timer): boolean
 	local currentTime = os.clock()
+	
 	Check(module.isTimer(self), ThrowTimerOperationError)
 	
 	if self.pauseTime == -1 and currentTime >= self.stopTime then
-		self.startTime = -1
-		self.stopTime = -1
 		self.isActive = false
 	end
 	
 	return self.pauseTime == -1 and not self.isActive
 end
 
---[[
-	Method: Returns `true` if `self` is in Paused state.
-	Otherwise, returns `false`. This can be used to detect Unknown state.
-]]
 index_table.IsPaused = function(self: Timer): boolean
 	Check(module.isTimer(self), ThrowTimerOperationError)
+	
 	return self.pauseTime ~= -1 and not self.isActive
 end
 
@@ -319,7 +310,7 @@ timer_meta.__index = index_table
 timer_meta.__newindex = function(self: Timer, key: any, value: any): nil
 	error(`Attempted to create a new index/key in <Timer> object.\nObject representation: {self}\nIndex/Key: {key}\nValue: {value}`)
 end
-timer_meta.__metatable = "Timer"
+timer_meta.__metatable = "TimerRBX"
 timer_meta.__tostring = function(self: Timer): string
 	-- Converts the current time into HH:MM:SS.SSS format. If it is inactive or unknown, returns 00:00:00.000 by default.
 	
@@ -331,7 +322,7 @@ timer_meta.__tostring = function(self: Timer): string
 	
 	local hours, minutes, seconds
 	
-	hours, timerTime = timerTime // 86400, timerTime % 86400
+	hours, timerTime = timerTime // 216000, timerTime % 216000
 	minutes, timerTime = timerTime // 3600, timerTime % 3600
 	seconds, timerTime = timerTime // 60, timerTime % 60
 	
@@ -349,15 +340,15 @@ timer_meta = timer_meta :: Timer_Meta
 -- MODULE --
 
 module = {
-	-- Constructor: Creates a new `Timer` object.
 	new = function(id: Timer_Identifier, duration: number, protected: boolean?): Timer
 		Check(isTimerId(id), ThrowTypeError, "TimerId", "id", 1, id)
 		Check(not module.hasTimer(id), ThrowExistingTimerError, id, 1)
 		Check(isNumber(duration), ThrowTypeError, "number" ,"duration", 2, duration)
 		Check(duration > 0, ThrowDurationError, duration, 2)
-		
+			
 		local self: Timer = setmetatable({
 			duration = duration,
+			timestamps = {},
 			
 			startTime = -1,
 			stopTime = -1,
@@ -365,28 +356,50 @@ module = {
 			
 			isActive = false,
 			
+			Started = Instance.new("BindableEvent"),
+			Resumed = Instance.new("BindableEvent"),
+			Paused = Instance.new("BindableEvent"),
+			Stopped = Instance.new("BindableEvent"),
+			Ended = Instance.new("BindableEvent"),
+			
+			Changed = Instance.new("BindableEvent"),
+			
 			id = id,
 			protected = if protected then protected else false
 		}, timer_meta)
-		
 		storage[id] = self
+		protected_storage[id] = if protected then self else nil
 		return self
 	end,
 	
-	-- Function: Destroys a `Timer` object using `id`.
 	destroy = function(id: Timer_Identifier): nil
 		Check(isTimerId(id), ThrowTypeError, "TimerId", "id", 1, id)
 		Check(not protected_storage[id], ThrowProtectedError, 1, id)
 		
 		local object = storage[id]
 		
+		table.clear(object.timestamps)
+		
 		object.duration = nil :: any
+		object.timestamps = nil :: any
 		
 		object.startTime = nil :: any
 		object.stopTime = nil :: any
 		object.pauseTime = nil :: any
 		
 		object.isActive = nil :: any
+		
+		object.Started:Destroy()
+		object.Resumed:Destroy()
+		object.Paused:Destroy()
+		object.Stopped:Destroy()
+		object.Ended:Destroy()
+		
+		object.Started = nil :: any
+		object.Resumed = nil :: any
+		object.Paused = nil :: any
+		object.Stopped = nil :: any
+		object.Ended = nil :: any
 		
 		object.id = nil :: any
 		object.protected = nil :: any
@@ -395,16 +408,26 @@ module = {
 		return nil
 	end,
 	
-	-- Function: Checks whether there exists a `Timer` with `id`.
+	isTimer = function(candidate: Timer): boolean
+		return type(candidate) == "table" and storage[candidate.id] == candidate
+	end,
+	
 	hasTimer = function(id: Timer_Identifier): boolean
 		Check(isTimerId(id), ThrowTypeError, "TimerId", "id", 1, id)
 		return storage[id] ~= nil
-	end,
-	
-	-- Function: Checks whether `candidate` is a `Timer` object.
-	isTimer = function(candidate: Timer): boolean
-		return type(candidate) == "table" and storage[candidate.id] == candidate
 	end
 }
+
+RunService.Heartbeat:Connect(function(_deltaTime: number)
+	local currentTime = os.clock()
+	
+	for _, timer in storage do
+		if timer.isActive and timer.stopTime > currentTime then
+			ResetTimer(timer)
+			timer.Stopped:Fire(currentTime)
+			timer.Ended:Fire(currentTime)
+		end
+	end
+end)
 
 return module
