@@ -1,10 +1,18 @@
-# DEPRECATED NOTICE
+# // DEPRECATED NOTICE \\\
 
-This repository has been DEPRECATED.
+This repository has been deprecated in favor of maintainability and scalability. Along with choosing Codeberg over GitHub to host repositories.
 
-Due to how complex the workflow had become to maintain each module by myself, I cannot continue working on them in a single repository. As such, I had stopped maintaining them in this repository. However, you may find them in their own separate repository in their `README.md` or on my GitHub profile!
+Due to the complexity of maintaining each module individually in this repository. I cannot continue storing them in a single repository. As such, I had decided to stop maintaining them as one unified Dependency Injection Extravagant repository. This marks the end of a journey.
 
-It has been a great journey using GitHub so far. I hope to continue enjoying this process for some time.
+However, that does not mean that these modules are no longer getting support. They are getting a new home to stay, you can find their respective repository in their `README.md` file or listed below.
+
+This repository will still be receiving updates to include any missing information and (hopefully) preserved as history.
+
+## Repository links
+
+- [ComplexNumber](https://codeberg.org/EternalAbby/ComplexNumber.luau)
+- Matrix (Pending link)
+- Timer (Pending link)
 
 # Welcome to Dependency-Injection-Extravagant.luau
 
