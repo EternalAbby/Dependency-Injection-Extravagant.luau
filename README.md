@@ -10,7 +10,9 @@ This repository will still be receiving updates to include any missing informati
 
 ## Repository links
 
-- [ComplexNumber](https://codeberg.org/EternalAbby/ComplexNumber.luau)
+- ComplexNumber:
+	- Codeberg: https://codeberg.org/EternalAbby/ComplexNumber.luau
+	- GitHub (not a mirror): https://github.com/EternalAbby/ComplexNumber.luau
 - Matrix (Pending link)
 - Timer (Pending link)
 
@@ -53,3 +55,4 @@ This option is limited to only the `.rbxm` file as this repository doesn't use a
 Similar to the steps in `Individual download`, except you download that one named `Dependency-Injection-Extravagant-<MAJOR.MINOR.PATCH>.rbxm`.
 
 Downloading this file will include a folder with every modules in it, so you don't have to download them individually.
+
