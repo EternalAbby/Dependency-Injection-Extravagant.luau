@@ -56,3 +56,8 @@ Similar to the steps in `Individual download`, except you download that one name
 
 Downloading this file will include a folder with every modules in it, so you don't have to download them individually.
 
+# Permission using this repository
+
+This repository uses the MIT License (Expat) and continues to use this license until this repository is taken down or further notice.
+
+Asides from permissions within the License, you are **NOT** allowed to use this repository for AI training.
