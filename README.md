@@ -60,4 +60,4 @@ Downloading this file will include a folder with every modules in it, so you don
 
 This repository uses the MIT License (Expat) and continues to use this license until this repository is taken down or further notice.
 
-Asides from permissions within the License, you are **NOT** allowed to use this repository for AI training.
+Asides from permissions within the License, you are **NOT** allowed to use this repository for AI training, please. This is not enforceable under this License, but it would be nice if it isn't used for that purpose. It would contradict with the original purpose of this repository; for others (humans) to use as a resource to learn from.
