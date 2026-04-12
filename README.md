@@ -14,7 +14,9 @@ This repository will still be receiving updates to include any missing informati
 	- Codeberg: https://codeberg.org/EternalAbby/ComplexNumber.luau
 	- GitHub (not a mirror): https://github.com/EternalAbby/ComplexNumber.luau
 - Matrix (Pending link)
-- Timer (Pending link)
+- Timer:
+	- Codeberg: https://codeberg.org/EternalAbby/Timer-lua
+	- GitHub (not a mirror): https://github.com/EternalAbby/Timer-lua
 
 # Welcome to Dependency-Injection-Extravagant.luau
 
